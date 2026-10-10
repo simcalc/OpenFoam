@@ -7,6 +7,7 @@ import shutil
 from .contracts import Job, WorkerDiagnostic, file_digest, write_json
 from .checkpoint import build_checkpoint
 from .resources import folder_size
+from .profiles import IMPELLER_PROFILES
 
 def _descriptor(path: Path, workspace: Path, *, role=None):
     item = {'path': path.relative_to(workspace).as_posix(), 'sha256': file_digest(path), 'bytes': path.stat().st_size}
@@ -20,7 +21,7 @@ def save_initial_state(job: Job, workspace: Path, case: Path) -> None:
     OpenFOAM initializes from its 0 directory; this snapshot is saved before the
     first physical step. It is not a solved initial-state or convergence claim.
     """
-    names = ('U', 'p') if job.profile == 'transient-cavity-v1' else ('U', 'p_rgh', 'alpha.water')
+    names = ('U', 'p_rgh', 'alpha.water') if job.profile == 'cavitation-bullet-v1' else ('U', 'p')
     required = [case / '0' / name for name in names]
     if any((not path.is_file() or path.is_symlink() for path in required)):
         raise WorkerDiagnostic('CFD_INITIAL_STATE_REQUIRED', 'Provide every pinned native initial field before beginning physical time integration.')
@@ -35,6 +36,22 @@ def save_initial_state(job: Job, workspace: Path, case: Path) -> None:
             target = destination.parent / 'potential-initializer' / 'Phi'
             target.parent.mkdir(exist_ok=False)
         shutil.copyfile(path, target)
+    if job.profile in IMPELLER_PROFILES:
+        source_points = case / 'constant/polyMesh/points'
+        if not source_points.is_file():
+            raise WorkerDiagnostic('CFD_INITIAL_MESH_REQUIRED', 'Save the actual unadvanced impeller mesh position alongside its initialized native fields before solving.')
+        if folder_size(workspace) + source_points.stat().st_size > job.limits.disk_bytes:
+            raise WorkerDiagnostic('CFD_DISK_LIMIT', 'The initial mesh snapshot would exceed the isolated worker disk budget.')
+        initial_points = destination.parent / 'constant/polyMesh/points'
+        initial_points.parent.mkdir(parents=True, exist_ok=False)
+        shutil.copyfile(source_points, initial_points)
+        ncc_state = case / '0/fvMesh'
+        if ncc_state.is_dir():
+            if any((path.is_symlink() for path in ncc_state.rglob('*'))):
+                raise WorkerDiagnostic('CFD_INITIAL_INTERFACE_INVALID', 'Save actual regular NCC topology files without symbolic links before physical solving.')
+            if folder_size(workspace) + folder_size(ncc_state) > job.limits.disk_bytes:
+                raise WorkerDiagnostic('CFD_DISK_LIMIT', 'The initial NCC topology snapshot would exceed the isolated worker disk budget.')
+            shutil.copytree(ncc_state, destination / 'fvMesh')
 
 def _logged_seconds(line: str, label: str) -> float | None:
     """Foundation 12 logs SI seconds bare or with `s`; no other units convert."""
@@ -52,7 +69,7 @@ def _logged_seconds(line: str, label: str) -> float | None:
 
 def _time_states(solver_log: str, case: Path, profile: str, step_offset=0) -> list[dict]:
     fixed = None
-    if profile == 'transient-cavity-v1':
+    if profile in ('transient-cavity-v1', 'impeller-transient-v1'):
         entry = re.findall('(?m)^\\s*deltaT\\s+([0-9.eE+-]+)\\s*;', (case / 'system' / 'controlDict').read_text())
         if len(entry) == 1:
             fixed = float(entry[0])
@@ -131,6 +148,9 @@ def verify_mesh_log(log: str) -> dict:
     return {'passed': True, 'cellCount': int(cells[0]), 'checks': ['allGeometry', 'allTopology'], 'meshCheck': 'Mesh OK'}
 
 def prepare(job: Job, workspace: Path, fixture_root: Path) -> tuple[Path, list[list[str]], dict]:
+    if job.profile in IMPELLER_PROFILES:
+        from . import impeller
+        return impeller.prepare(job, workspace, fixture_root.parent / 'openfoam12-impeller')
     import json
     provenance = json.loads((fixture_root / 'provenance.json').read_text())
     source = fixture_root / job.profile
@@ -204,6 +224,11 @@ def field_values(path: Path) -> list[float]:
     return values
 
 def collect(job: Job, workspace: Path, case: Path, *, log_name='foamRun.log', target_time=None, minimum_time=0, checkpoint_prefix='', step_offset=0) -> dict:
+    if job.profile in IMPELLER_PROFILES:
+        from . import impeller
+        if log_name != 'foamRun.log' or target_time is not None or minimum_time or checkpoint_prefix or step_offset:
+            raise WorkerDiagnostic('CFD_RESTART_PROFILE_INVALID', 'The educational impeller has no reviewed restart execution profile; preserve its exact first-run checkpoint.')
+        return impeller.collect(job, workspace, case)
     solver_log = (workspace / 'output' / 'logs' / log_name).read_text(errors='replace')
     mesh_log = (workspace / 'output' / 'logs' / 'checkMesh.log').read_text(errors='replace')
     verify_mesh_log(mesh_log)

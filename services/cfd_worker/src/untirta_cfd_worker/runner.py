@@ -16,6 +16,7 @@ from .contracts import Job, WorkerDiagnostic, digest, file_digest, write_json
 from . import openfoam
 from .resources import ProcessRunner, folder_size
 from .checkpoint import validate_checkpoint_descriptor
+from .profiles import IMPELLER_PROFILES
 
 @contextmanager
 def single_job(workspace_root: Path):
@@ -74,6 +75,17 @@ def validate_checkpoint(workspace: Path, checkpoint: Path, binding: dict) -> dic
                 raise WorkerDiagnostic('CFD_CHECKPOINT_TIME_PAIR_MISMATCH', 'Native fields and mesh checkpoint must belong to the same physical time.')
     if not data.get('files') or not data.get('meshPosition'):
         raise WorkerDiagnostic('CFD_CHECKPOINT_INCOMPLETE', 'The checkpoint requires paired native outputs and a declared mesh position.')
+    if data.get('timeInterpretation') == 'steady-iteration':
+        iteration = data.get('iteration')
+        if isinstance(iteration, bool) or not isinstance(iteration, int) or iteration < 0:
+            raise WorkerDiagnostic('CFD_CHECKPOINT_TIME_INVALID', 'A steady checkpoint needs its nonnegative integer solver iteration.')
+        names = [item['path'] for item in data['files']]
+        cases = [name for name in names if name.endswith('.cas.h5')]
+        datasets = [name for name in names if name.endswith('.dat.h5')]
+        if len(cases) != 1 or len(datasets) != 1:
+            raise WorkerDiagnostic('CFD_FLUENT_CASE_DATA_PAIR_REQUIRED', 'Fluent checkpoints require both matching case and data.')
+        if cases[0][:-7] != datasets[0][:-7] or data.get('physicalTimeSeconds') is not None:
+            raise WorkerDiagnostic('CFD_FLUENT_CASE_DATA_PAIR_MISMATCH', 'Pair native case and data from the same iteration; MRF iterations are not physical time.')
     return data
 
 def execute_job(source: dict[str, Any], reference: dict[str, Any], workspace_root: Path, fixture_root: Path, *, restart_smoke: bool=False) -> dict:
@@ -83,6 +95,8 @@ def execute_job(source: dict[str, Any], reference: dict[str, Any], workspace_roo
     capabilities = capability_report()
     if not capabilities['adapters'][job.adapter]['available']:
         return {'schemaVersion': 'untirta.cfd-worker-result.v1', **job.binding(), 'status': 'InputRequired', 'actualCfdRun': False, 'reasonCode': capabilities['adapters'][job.adapter]['reasonCode'], 'action': 'Provide the declared solver/runtime and whole-tree resource enforcement; independent valid methods remain available.', 'capabilities': capabilities}
+    if job.adapter == 'openfoam' and job.profile in IMPELLER_PROFILES and (not shutil.which('createNonConformalCouples')):
+        return {'schemaVersion': 'untirta.cfd-worker-result.v1', **job.binding(), 'status': 'InputRequired', 'actualCfdRun': False, 'reasonCode': 'CFD_NCC_EXECUTABLE_REQUIRED', 'action': 'Use the complete checksum-pinned Foundation 12 runtime with createNonConformalCouples; no impeller mesh or solve has been started.', 'capabilities': capabilities}
     with single_job(workspace_root.resolve()):
         run_id = job.study_id + '-' + uuid4().hex[:12]
         workspace = workspace_root.resolve() / run_id

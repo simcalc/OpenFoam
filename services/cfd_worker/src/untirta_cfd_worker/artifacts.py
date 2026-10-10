@@ -19,6 +19,7 @@ import zipfile
 import zlib
 from .checkpoint import assess_temporal_evidence, diagnostic, fail, file_descriptors, safe_path, strict_json, validate_binding, validate_checkpoint_descriptor, validate_time_history, ID, SHA
 from .contracts import WorkerDiagnostic, digest
+from .profiles import IMPELLER_PROFILES, IMPELLER_MOTION_DICT_SHA256, IMPELLER_NCC_DICT_SHA256
 SCHEMA = 'untirta.cfd-artifact.v1'
 ROLES = {'input', 'reference', 'checkpoint', 'native', 'time-history', 'temporal-evidence', 'result', 'log'}
 NATIVE_NAMES = {'U', 'p', 'p_rgh', 'alpha.water', 'alpha.vapour', 'alphaPhi.water', 'phi', 'Phi', 'rho', 'rho.water', 'rho.vapour', 'T', 'k', 'epsilon', 'omega', 'nut', 'nuTilda', 'alphat', 'points', 'faces', 'owner', 'neighbour', 'boundary', 'cellZones', 'faceZones', 'pointZones', 'controlDict', 'fvSchemes', 'fvSolution', 'blockMeshDict', 'snappyHexMeshDict', 'decomposeParDict', 'dynamicMeshDict', 'motionProperties', 'transportProperties', 'physicalProperties', 'momentumTransport', 'physicalProperties.water', 'physicalProperties.vapour', 'phaseProperties', 'thermophysicalProperties', 'turbulenceProperties', 'MRFProperties', 'g', 'fvModels', 'fvConstraints', 'pointDisplacement', 'cellDisplacement', 'cellLevel', 'pointLevel', 'level0Edge', 'refinementHistory', 'surfaceIndex', 'uniform', 'time'}
@@ -114,13 +115,29 @@ def _members(raw: bytes, limits: ArtifactLimits) -> dict[str, bytes]:
             fail('CFD_ARTIFACT_DUPLICATE_PATH', 'Remove file/directory path collisions from the archive.')
     return data
 
-def _role_path(path: str, role: str, limits: ArtifactLimits, raw: bytes) -> None:
+def _native_name_allowed(path: str, profile=None) -> bool:
+    name = path.rsplit('/', 1)[-1]
+    if name in NATIVE_NAMES or name.endswith(('.cas.h5', '.dat.h5', '.msh.h5', '.stl', '.obj')):
+        return True
+    if profile in IMPELLER_PROFILES:
+        saved_time = '0.01' if profile == 'impeller-transient-v1' else '50'
+        if path == 'output/native-case/system/createNonConformalCouplesDict':
+            return True
+        if name == 'polyFaces' and path in {'output/native-case/constant/fvMesh/polyFaces', 'output/native-case/0/fvMesh/polyFaces', 'output/native-initial-state/0/fvMesh/polyFaces', f'output/native-case/{saved_time}/fvMesh/polyFaces'}:
+            return True
+        if name == 'meshPhi' and profile == 'impeller-transient-v1' and (path == 'output/native-case/0.01/meshPhi'):
+            return True
+        if name == 'Uf' and path == f'output/native-case/{saved_time}/Uf':
+            return True
+    return False
+
+def _role_path(path: str, role: str, limits: ArtifactLimits, raw: bytes, *, profile=None) -> None:
     prefixes = {'input': 'input/', 'reference': 'reference/', 'checkpoint': 'checkpoints/', 'native': 'output/', 'time-history': 'output/', 'temporal-evidence': 'output/', 'result': 'output/', 'log': 'output/logs/'}
     if role not in ROLES or not path.startswith(prefixes[role]):
         fail('CFD_ARTIFACT_ROLE_PATH_INVALID', 'Keep independent input, immutable reference, checkpoints and native outputs in their designated folders.')
     name = path.rsplit('/', 1)[-1]
     if role == 'native':
-        if name not in NATIVE_NAMES and (not name.endswith(('.cas.h5', '.dat.h5', '.msh.h5', '.stl', '.obj'))):
+        if not _native_name_allowed(path, profile):
             fail('CFD_ARTIFACT_NATIVE_TYPE_PROHIBITED', 'Include supported inert native fields, mesh/settings dictionaries or Fluent HDF5 pairs; scripts/executables are prohibited.')
         if name.endswith(('.cas.h5', '.dat.h5', '.msh.h5')) and (not raw.startswith(b'\x89HDF\r\n\x1a\n')):
             fail('CFD_NATIVE_SIGNATURE_INVALID', 'Provide actual HDF5 native solver files rather than renamed placeholders.')
@@ -128,6 +145,12 @@ def _role_path(path: str, role: str, limits: ArtifactLimits, raw: bytes) -> None
             fail('CFD_ARTIFACT_NATIVE_TYPE_PROHIBITED', 'Executable content cannot be imported as native CFD evidence.')
         if not name.endswith(('.cas.h5', '.dat.h5', '.msh.h5')):
             text = raw.decode('utf-8', errors='replace')
+            if profile in IMPELLER_PROFILES:
+                text = re.sub('(?m)^\\s*#includeEtc\\s+"caseDicts/setConstraintTypes"\\s*$', '', text)
+                if name == 'createNonConformalCouplesDict' and sha256(raw).hexdigest() != IMPELLER_NCC_DICT_SHA256:
+                    fail('CFD_ARTIFACT_NCC_CONFIGURATION_CHANGED', 'Use the immutable native 24-couple Foundation 12 impeller NCC configuration; imported arbitrary coupling dictionaries are not approved.')
+                if profile == 'impeller-transient-v1' and path == 'output/native-case/constant/dynamicMeshDict' and (sha256(raw).hexdigest() == IMPELLER_MOTION_DICT_SHA256):
+                    text = re.sub('\\blibs\\s*\\(\\s*"libfvMotionSolvers\\.so"\\s*\\)\\s*;', '', text)
             if re.search('(?im)#\\s*(?:include\\w*|codeStream|calc|eval)\\b|\\btype\\s+coded\\w*\\s*;|\\b(?:codeExecute|codeWrite|codeInclude|codeOptions|codeLibs)\\b|\\blibs\\s*\\(', text):
                 fail('CFD_ARTIFACT_ACTIVE_DICTIONARY_PROHIBITED', 'Remove dynamic code, external includes and library loading from imported native dictionaries; imported contents are never executed.')
     elif role == 'log':
@@ -201,7 +224,9 @@ def _inspect(archive: bytes | Path, expected_binding: dict | None, limits: Artif
         if path in declared or path == 'manifest.json':
             fail('CFD_ARTIFACT_DUPLICATE_PATH', 'List each archive member exactly once, excluding manifest.json.')
         declared.add(path)
-        _role_path(path, item['role'], limits, files[path])
+        method = manifest.get('method')
+        profile = method.get('id') if isinstance(method, dict) else None
+        _role_path(path, item['role'], limits, files[path], profile=profile)
         role_paths[item['role']].append(path)
         if item['role'] not in ('native', 'log'):
             documents[path] = strict_json(files[path])
@@ -217,6 +242,9 @@ def _inspect(archive: bytes | Path, expected_binding: dict | None, limits: Artif
         fail('CFD_ARTIFACT_SOURCE_BINDING_MISMATCH', 'Bind artifacts to the exact canonical input and immutable reference JSON, separately from derived outputs.')
     if source.get('studyId') != binding['studyId'] or source.get('inputRevision') != binding['inputRevision']:
         fail('CFD_ARTIFACT_SOURCE_BINDING_MISMATCH', 'Use the exact study ID and input revision represented by the archived input-only document.')
+    if isinstance(manifest.get('method'), dict) and manifest['method'].get('id') in IMPELLER_PROFILES:
+        if source.get('schemaVersion') != 'untirta.cfd-worker-job.v1' or source.get('caseProfile') != manifest['method']['id'] or source.get('adapter') != 'openfoam':
+            fail('CFD_ARTIFACT_FIXED_PROFILE_MISMATCH', 'Reviewed impeller native exceptions require the exact approved package-bound fixed OpenFOAM job; arbitrary pump studies cannot inherit them.')
     if source['schemaVersion'] == 'untirta.cfd-worker-job.v1':
         from .contracts import Job
         Job.parse(source, reference)
@@ -293,7 +321,7 @@ def _workspace(root: Path) -> Path:
 
 def create_artifact_bytes(*, artifact_id: str, binding: dict, solver: dict, method: dict, evidence_role: str, provenance: dict, lifecycle: dict, files: dict[str, tuple[bytes, str]]) -> bytes:
     """Export inert declared files; suitable for adapters and labeled contract fixtures."""
-    unsupported = sorted({path.rsplit('/', 1)[-1] for path, (_, role) in files.items() if role == 'native' and path.rsplit('/', 1)[-1] not in NATIVE_NAMES and (not path.endswith(('.cas.h5', '.dat.h5', '.msh.h5', '.stl', '.obj')))})
+    unsupported = sorted({path.rsplit('/', 1)[-1] for path, (_, role) in files.items() if role == 'native' and (not _native_name_allowed(path, method.get('id') if isinstance(method, dict) else None))})
     if unsupported:
         names = ', '.join((name for name in unsupported if re.fullmatch('[A-Za-z0-9_.-]{1,80}', name)))[:512]
         fail('CFD_ARTIFACT_NATIVE_TYPE_PROHIBITED', 'Review the actual unsupported native basenames before export: ' + (names or 'invalid basename') + '. Keep scripts/executables prohibited.')

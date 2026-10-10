@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import shutil
 import sys
+from .profiles import IMPELLER_PROFILES
 
 def linux_cgroup_limits() -> dict:
     try:
@@ -21,4 +22,4 @@ def capability_report() -> dict:
     resource_supported = native_windows or cgroup['supported']
     executables = {name: shutil.which(name) for name in ('blockMesh', 'checkMesh', 'foamRun', 'snappyHexMesh', 'potentialFoam')}
     openfoam = sys.platform == 'linux' and all(executables.values()) and (os.environ.get('WM_PROJECT_VERSION') == '12')
-    return {'schemaVersion': 'untirta.cfd-worker-capabilities.v1', 'mainApplicationDependency': False, 'resourceEnforcement': {'available': resource_supported, 'mode': 'windows-job-object' if native_windows else 'inherited-cgroup-v2' if cgroup['supported'] else 'unavailable', 'aggregateMemoryHardCap': resource_supported, 'singleJob': True, 'threads': 1, 'diskCap': '10-ms-watchdog-not-filesystem-hard-quota', 'maximumProcessesOrTasks': 32 if native_windows else cgroup.get('maximumTasks'), 'linuxInheritedLimits': cgroup}, 'adapters': {'openfoam': {'available': bool(openfoam and resource_supported), 'solverDetected': bool(openfoam), 'requiredVersion': 'Foundation-12', 'detectedVersion': os.environ.get('WM_PROJECT_VERSION'), 'reasonCode': 'CFD_READY_FOR_DEVELOPMENT_BENCHMARK' if openfoam and resource_supported else 'CFD_RESOURCE_CAP_REQUIRED' if openfoam else 'CFD_SOLVER_UNAVAILABLE', 'profiles': ['transient-cavity-v1', 'cavitation-bullet-v1'], 'pumpCfdValidated': False}}, 'actualCfdRunVerified': False}
+    return {'schemaVersion': 'untirta.cfd-worker-capabilities.v1', 'mainApplicationDependency': False, 'resourceEnforcement': {'available': resource_supported, 'mode': 'windows-job-object' if native_windows else 'inherited-cgroup-v2' if cgroup['supported'] else 'unavailable', 'aggregateMemoryHardCap': resource_supported, 'singleJob': True, 'threads': 1, 'diskCap': '10-ms-watchdog-not-filesystem-hard-quota', 'maximumProcessesOrTasks': 32 if native_windows else cgroup.get('maximumTasks'), 'linuxInheritedLimits': cgroup}, 'adapters': {'openfoam': {'available': bool(openfoam and resource_supported), 'solverDetected': bool(openfoam), 'requiredVersion': 'Foundation-12', 'detectedVersion': os.environ.get('WM_PROJECT_VERSION'), 'reasonCode': 'CFD_READY_FOR_DEVELOPMENT_BENCHMARK' if openfoam and resource_supported else 'CFD_RESOURCE_CAP_REQUIRED' if openfoam else 'CFD_SOLVER_UNAVAILABLE', 'profiles': ['transient-cavity-v1', 'cavitation-bullet-v1', *IMPELLER_PROFILES], 'profileExecutables': {profile: {'createNonConformalCouples': shutil.which('createNonConformalCouples')} for profile in IMPELLER_PROFILES}, 'pumpCfdValidated': False}}, 'actualCfdRunVerified': False}

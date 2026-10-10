@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 import re
 from typing import Any
+from .profiles import IMPELLER_PROFILES, benchmark_reference
 
 class WorkerDiagnostic(ValueError):
 
@@ -82,16 +83,21 @@ class Job:
         if not isinstance(source['parameters'], dict):
             raise WorkerDiagnostic('CFD_PARAMETERS_INVALID', 'Supply the parameters required by the selected profile.')
         adapter, profile = (source['adapter'], source['caseProfile'])
-        if set(reference) != {'schemaVersion', 'kind', 'caseProfile', 'sourceCommit'} or reference.get('schemaVersion') != 'untirta.cfd-benchmark-reference.v1':
+        if profile in IMPELLER_PROFILES:
+            if reference != benchmark_reference(profile):
+                raise WorkerDiagnostic('CFD_PUBLIC_REFERENCE_SCHEMA_INVALID', 'Use only the exact fixed package-bound educational impeller reference; no student/Main snapshots.')
+        elif set(reference) != {'schemaVersion', 'kind', 'caseProfile', 'sourceCommit'} or reference.get('schemaVersion') != 'untirta.cfd-benchmark-reference.v1':
             raise WorkerDiagnostic('CFD_PUBLIC_REFERENCE_SCHEMA_INVALID', 'Only the generated fixed tutorial reference is allowed; no student/Main snapshots.')
-        allowed = {'openfoam': {'transient-cavity-v1', 'cavitation-bullet-v1'}}
+        allowed = {'openfoam': {'transient-cavity-v1', 'cavitation-bullet-v1', *IMPELLER_PROFILES}}
         if not isinstance(adapter, str) or not isinstance(profile, str) or adapter not in allowed or (profile not in allowed[adapter]):
             raise WorkerDiagnostic('CFD_PROFILE_UNSUPPORTED', 'Select an approved versioned adapter profile; arbitrary commands are not accepted.')
         if adapter == 'openfoam' and source['parameters']:
             raise WorkerDiagnostic('CFD_BENCHMARK_PARAMETERS_LOCKED', 'Development fixtures use fixed parameters; they are not user Pump studies.')
         if adapter == 'openfoam' and reference.get('kind') != 'development-benchmark':
             raise WorkerDiagnostic('CFD_BENCHMARK_REFERENCE_INVALID', 'These fixture profiles are limited to project numerical development benchmarks.')
-        if adapter == 'openfoam' and (reference.get('caseProfile') != profile or reference.get('sourceCommit') != '0b487fc98b88d3e8dc3c3ead4662e7632dd5e7dd'):
+        if adapter == 'openfoam' and profile in IMPELLER_PROFILES and (reference != benchmark_reference(profile)):
+            raise WorkerDiagnostic('CFD_BENCHMARK_REFERENCE_INVALID', 'Use the exact approved package version/build/checksum-bound educational impeller reference; it is not a user Pump input.')
+        if adapter == 'openfoam' and profile not in IMPELLER_PROFILES and (reference.get('caseProfile') != profile or reference.get('sourceCommit') != '0b487fc98b88d3e8dc3c3ead4662e7632dd5e7dd'):
             raise WorkerDiagnostic('CFD_BENCHMARK_REFERENCE_INVALID', 'Use the exact approved benchmark profile and pinned source commit reference.')
         return cls(source['studyId'], source['inputRevision'], adapter, profile, source, reference, Limits.parse(source['limits']))
 

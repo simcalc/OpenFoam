@@ -1,0 +1,137 @@
+{
+  "schemaVersion": "untirta.cfd-package-fixture-provenance.v1",
+  "sourcePackage": {
+    "name": "openfoam12",
+    "version": "20250206",
+    "architecture": "amd64",
+    "bytes": 112877506,
+    "sha256": "b3dcd9a636a5a827bf43ffcf0156922ba6db492123f035eae1046ee759602dd1",
+    "build": "12-86e126a7bc4d",
+    "url": "https://downloads.sourceforge.net/project/foam/foam/ubuntu/dists/noble/main/binary-amd64/openfoam12_20250206_amd64.deb"
+  },
+  "sourceRepository": "https://github.com/OpenFOAM/OpenFOAM-12",
+  "sourceCase": "tutorials/incompressibleFluid/impeller",
+  "license": "GPL-3.0-or-later",
+  "files": [
+    {
+      "path": "native/0/U",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/0/U",
+      "bytes": 1284,
+      "sha256": "9ae6c4c11690fd0983f3fe03a2d40b57e13be8f764f062516aaace8710ad4ed8"
+    },
+    {
+      "path": "native/0/epsilon",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/0/epsilon",
+      "bytes": 1128,
+      "sha256": "6147da3b635139f335ee8975cf1e9edeb858ee0bc9ef01a0e72665d4391aeeff"
+    },
+    {
+      "path": "native/0/k",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/0/k",
+      "bytes": 1116,
+      "sha256": "45994110913441b90c6260625c2d370ddf39dd7984f0260261088466d31a9982"
+    },
+    {
+      "path": "native/0/nut",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/0/nut",
+      "bytes": 1095,
+      "sha256": "70db359608cf18bc56c9ecada0c4ff8d1b8756d7f6a1000289f8716dd33a39ae"
+    },
+    {
+      "path": "native/0/p",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/0/p",
+      "bytes": 1085,
+      "sha256": "dab32d78a0043d816e0c0ab0c3d630d353469281f111d1f3383135cea735580f"
+    },
+    {
+      "path": "native/constant/dynamicMeshDict",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/constant/dynamicMeshDict",
+      "bytes": 965,
+      "sha256": "296b91a86de32230c7316b7e87b8d5ba7be15aa6d0b3fb4a55ae5913d46d462e"
+    },
+    {
+      "path": "native/constant/momentumTransport",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/constant/momentumTransport",
+      "bytes": 792,
+      "sha256": "47a6ec9c9f4fabefb08a8e2b6af2ab58c11d2c218d0f193d08db3a62994285cd"
+    },
+    {
+      "path": "native/constant/physicalProperties",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/constant/physicalProperties",
+      "bytes": 750,
+      "sha256": "f41e7bf87ed27490fe8f190087c5d716869e3f2df218abd90f57cf199fc46efb"
+    },
+    {
+      "path": "native/system/blockMeshDict",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/system/blockMeshDict",
+      "bytes": 4212,
+      "sha256": "57258898fd6fc7b0fac41b730ce4e1e388c314b176d48a5bb1dc458c90a53689"
+    },
+    {
+      "path": "native/system/controlDict",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/system/controlDict",
+      "bytes": 1115,
+      "sha256": "fd70e86304b4b11e62a5e9a8a72609a6708229377f2b96d51a01e1e4137c73d2"
+    },
+    {
+      "path": "native/system/createNonConformalCouplesDict",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/system/createNonConformalCouplesDict",
+      "bytes": 2936,
+      "sha256": "1d26944e7563c884cb3e8dcbbe1540c1f311a974a43f48281a762b96e9e863d1"
+    },
+    {
+      "path": "native/system/decomposeParDict",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/system/decomposeParDict",
+      "bytes": 726,
+      "sha256": "85a98ed3c801e2490565981b68077f9f7579484f02ad552a02c9045e6f758747"
+    },
+    {
+      "path": "native/system/functions",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/system/functions",
+      "bytes": 1024,
+      "sha256": "9495244249138e8b8fed74f5fcc4dabf6aaa083006acc8facdb1e2b8d5795559"
+    },
+    {
+      "path": "native/system/fvSchemes",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/system/fvSchemes",
+      "bytes": 1224,
+      "sha256": "6fde049080372bb63fc099ff292f27760356f6a3b22536854d01e685d64f5e1c"
+    },
+    {
+      "path": "native/system/fvSolution",
+      "sourcePath": "tutorials/incompressibleFluid/impeller/system/fvSolution",
+      "bytes": 1462,
+      "sha256": "74e9bc85f5cdd87cf1c5a0dfd56530f36bba4e6885cafb1e40294edb6cdde11c"
+    },
+    {
+      "path": "mrf-reference/system/fvSchemes",
+      "sourcePath": "tutorials/incompressibleFluid/mixerVessel2DMRF/system/fvSchemes",
+      "bytes": 1186,
+      "sha256": "a39f77e3cafec249194ae1fab734e45e34c77e37a38f76edc4c1f0335b97884c"
+    },
+    {
+      "path": "mrf-reference/system/fvSolution",
+      "sourcePath": "tutorials/incompressibleFluid/mixerVessel2DMRF/system/fvSolution",
+      "bytes": 1692,
+      "sha256": "43a557eaaf14b9890c1cd63923870d4a4b8aded45543b1d54c5a5811335287da"
+    },
+    {
+      "path": "mrf-reference/constant/MRFProperties",
+      "sourcePath": "tutorials/incompressibleFluid/mixerVessel2DMRF/constant/MRFProperties",
+      "bytes": 786,
+      "sha256": "9494dee46684f25f72c543381c8bec17ca87ffe144b74e6a3d83b264834be6eb"
+    },
+    {
+      "path": "mrf-reference/0/U",
+      "sourcePath": "tutorials/incompressibleFluid/mixerVessel2DMRF/0/U",
+      "bytes": 948,
+      "sha256": "c7f691d49da2a71e2661e591a7b8b777dac823f519c9afd72f54a9a5513f3350"
+    },
+    {
+      "path": "COPYING",
+      "sourcePath": "COPYING",
+      "bytes": 35646,
+      "sha256": "a62f4262b9739f43478d025ed9fc5419585ec27b4b50e88f55e3186141e18ef1"
+    }
+  ]
+}

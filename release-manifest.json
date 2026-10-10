@@ -5,11 +5,20 @@
   "scope": "fixed OpenFOAM educational benchmarks and pinned official software distribution only",
   "publicationState": "export-prepared",
   "actualLocalCfdRun": false,
-  "officialTutorialFiles": 29,
-  "licenseAndProvenanceFiles": 2,
-  "officialFixtureFiles": 31,
+  "officialTutorialFiles": 48,
+  "licenseAndProvenanceFiles": 4,
+  "officialFixtureFiles": 52,
+  "fixedProfiles": [
+    "cavitation-bullet-v1",
+    "impeller-mrf-v1",
+    "impeller-transient-v1",
+    "transient-cavity-v1"
+  ],
+  "impellerSourcePackageSha256": "b3dcd9a636a5a827bf43ffcf0156922ba6db492123f035eae1046ee759602dd1",
+  "impellerSourcePackageBuild": "12-86e126a7bc4d",
+  "impellerSourceFixtureFiles": 20,
   "exporterSourcePath": "tools/cfd_worker/export_public.py",
-  "exporterSourceSha256": "e895a4530436c4347123518e921a183413a0f4ccd638b5cb7fd77a8f18e95b2a",
+  "exporterSourceSha256": "30bb474c14fc3eb944a469d58b01ebb476f2c97cc9e2c08f889c5d5c910fa80a",
   "excluded": [
     "Main application",
     "Lab API",
@@ -29,6 +38,14 @@
       "projection": "latest canonical manual workflow; public-only pre-allocation gate",
       "canonicalSourcePath": ".github/workflows/cavitation-cfd-validation.yml",
       "canonicalSourceSha256": "e2f5c4ce91495be770fa4c0c9c3ae258d0b2534fb6f27e90e81f575f7c250a4a"
+    },
+    {
+      "path": ".github/workflows/impeller-cfd-validation.yml",
+      "sha256": "ccc99830e3951aa69163a22a52a2c8db39e95f11f9a0c797938913833f724f24",
+      "bytes": 5545,
+      "projection": "latest canonical manual workflow; public-only pre-allocation gate",
+      "canonicalSourcePath": ".github/workflows/impeller-cfd-validation.yml",
+      "canonicalSourceSha256": "a9cbe39948cdbe191736e7156900a031283d0749d3125ec091d42acb59bd6fb0"
     },
     {
       "path": ".github/workflows/openfoam-software-release.yml",
@@ -56,11 +73,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "6f2ca7909cd75d45ebf97839e8d3cf60a40700862cbc5e5790460d6dd2331a5a",
-      "bytes": 10723,
+      "sha256": "af526ea9c20c92619cb51057853b3b26280c6ecb3ce797f0ad90d164c8e95fee",
+      "bytes": 11841,
       "projection": "canonical small public release template",
       "canonicalSourcePath": "deployment/cfd-public/README.md",
-      "canonicalSourceSha256": "bc06af1b814d715cc160423125c62e9a98254b0f86217aedcf1832bd302359ec"
+      "canonicalSourceSha256": "8731e35a23378724861b528d4e6dd67f4471d483ff6a7d4bf41881d6bcbbccea"
     },
     {
       "path": "docs/software-release-INSTALL.md",
@@ -80,43 +97,51 @@
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/artifacts.py",
-      "sha256": "247f9b8dc535cd8c16b810a792347940bd5662788c3d9bb9a42fdf428635cefa",
-      "bytes": 25919,
+      "sha256": "ccee2cefae62a30fac71a60a07879c5542cdd47ad416f1eedb1a741563f1d254",
+      "bytes": 28233,
       "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
       "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/artifacts.py",
-      "canonicalSourceSha256": "c51046c7f0a1cd4386ee4eae77ea0e0dcc4ffb0bcbe4bd50df550731bc5f1f3f"
+      "canonicalSourceSha256": "7bfbcdf53a9fa68b5cec1da1f8776be7c364fa587ca44ebfb97eb81c370d482e"
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/capabilities.py",
-      "sha256": "3fbbf629fd2606c4dce832f7ce7f44e552779e141539dda7bc07fd4a502b5bea",
-      "bytes": 2542,
+      "sha256": "112cc0641c391894d507cdb28b6cab3be98aaf5b7629471d9de829ab542a4d99",
+      "bytes": 2742,
       "projection": "Linux/OpenFOAM-only authoritative capability projection",
       "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/capabilities.py",
-      "canonicalSourceSha256": "e8a71ba8fbe302d2db959173da5c8559656f28277a4e29140f7e8d8971f60287"
+      "canonicalSourceSha256": "ca905a792745263fd6fd076731eece6c719912dd678cab6914527d81b2ca3602"
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/checkpoint.py",
-      "sha256": "85890bd62a2789f95e5da93d7d4d2ef359835869c940387b7987b0eb4391d90a",
-      "bytes": 29460,
+      "sha256": "4fe48a0f5b35ee4337677ba93d0fdfadab91a83f438c5b24d67eeb440e87eecb",
+      "bytes": 30320,
       "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
       "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/checkpoint.py",
-      "canonicalSourceSha256": "7b50424f2a315204996442ac87f0bc9058aa8041e19412e3e2b67369e984bc19"
+      "canonicalSourceSha256": "eb531f7ca34cc0f5423c2639d17479a1e1cbf3d61f5a1feb96cdc7fad79317c6"
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/contracts.py",
-      "sha256": "5d729eb25a632b45fb7650cba2de63f54e28540b96d90e1f0bc9857e129e5eee",
-      "bytes": 6305,
+      "sha256": "e104690043d06e8ed6b570ef096a16a6b68f5a3abdf307ff5b6f78cb459e733b",
+      "bytes": 7012,
       "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
       "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/contracts.py",
-      "canonicalSourceSha256": "d417bf4acde3ae2dee6aa57aaf74e6f080603eaa0109f4ba4ad69b50a4b9231b"
+      "canonicalSourceSha256": "07f7f3c618fb0bc46bf4228d99356e794af639206279bb05b9565e0e7481e068"
+    },
+    {
+      "path": "services/cfd_worker/src/untirta_cfd_worker/impeller.py",
+      "sha256": "8ff93835626d3df1afb53f9b342dd470ae4661a0e88e024ef3575e4eacf130b3",
+      "bytes": 27316,
+      "projection": "byte-identical reviewed fixed impeller/native frame and provenance logic",
+      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/impeller.py",
+      "canonicalSourceSha256": "8ff93835626d3df1afb53f9b342dd470ae4661a0e88e024ef3575e4eacf130b3"
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/openfoam.py",
-      "sha256": "9e289458a432b974d273cd7ef0218391758dfc8b99258de0d3e4f47ee133e39e",
-      "bytes": 21580,
+      "sha256": "8fa22b4e958028df9dc345d55466f690c97b008d04a6993eee860c3b4547a7bc",
+      "bytes": 23554,
       "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
       "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/openfoam.py",
-      "canonicalSourceSha256": "8df743c4d8e075e5fd81fc91d8676b116d030f9ffba6cc399f10316f2a0a874b"
+      "canonicalSourceSha256": "1f45592062bff5e954da01f031cab22103553b5f804b09153d0af4d44a451f75"
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/process_gate.py",
@@ -125,6 +150,14 @@
       "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
       "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/process_gate.py",
       "canonicalSourceSha256": "daf69b20f39ced597b5d1958c62819fafa1c9551efbd40a9ea18ebcdaadca828"
+    },
+    {
+      "path": "services/cfd_worker/src/untirta_cfd_worker/profiles.py",
+      "sha256": "74078e13d2c5a53ac8a78bc4fa288f423985903aa61604fa1c725920585cc8a6",
+      "bytes": 1382,
+      "projection": "byte-identical reviewed fixed impeller/native frame and provenance logic",
+      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/profiles.py",
+      "canonicalSourceSha256": "74078e13d2c5a53ac8a78bc4fa288f423985903aa61604fa1c725920585cc8a6"
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/resources.py",
@@ -136,11 +169,19 @@
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/runner.py",
-      "sha256": "3160f2ed7850fe41b010808309cfed7fe5740746170981c9a48f125082f4e162",
-      "bytes": 12003,
+      "sha256": "1904887adb681b70c84fbf2626cbdc302fbf329251c9a1beb21cb29385fe50cb",
+      "bytes": 13486,
       "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
       "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/runner.py",
-      "canonicalSourceSha256": "79d488ba44038ceaabf5456c6c22679035952ae774ca1a134fff49865986d1ab"
+      "canonicalSourceSha256": "0a507c5222641365f3e170fc6f5daa9ba3d5af48de25e32435f6acff114e11b1"
+    },
+    {
+      "path": "tests/test_impeller.py",
+      "sha256": "cf07554c25b7198f0cf6c14e222c209416c38a466594751e54ac57b5b15e506a",
+      "bytes": 20681,
+      "projection": "same official-source/frame/native-security contracts; not actual CFD",
+      "canonicalSourcePath": "tests/cfd_worker/test_impeller.py",
+      "canonicalSourceSha256": "cf07554c25b7198f0cf6c14e222c209416c38a466594751e54ac57b5b15e506a"
     },
     {
       "path": "tests/test_release_boundary.py",
@@ -157,6 +198,174 @@
       "projection": "same offline software release contracts; no live publication claim",
       "canonicalSourcePath": "tests/cfd_worker/test_software_release.py",
       "canonicalSourceSha256": "f7406e93ad67663cc53eb10af867a7323a01c37359f4a23b48f99409111f21e7"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/COPYING",
+      "sha256": "a62f4262b9739f43478d025ed9fc5419585ec27b4b50e88f55e3186141e18ef1",
+      "bytes": 35646,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/COPYING",
+      "canonicalSourceSha256": "a62f4262b9739f43478d025ed9fc5419585ec27b4b50e88f55e3186141e18ef1"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/mrf-reference/0/U",
+      "sha256": "c7f691d49da2a71e2661e591a7b8b777dac823f519c9afd72f54a9a5513f3350",
+      "bytes": 948,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/mrf-reference/0/U",
+      "canonicalSourceSha256": "c7f691d49da2a71e2661e591a7b8b777dac823f519c9afd72f54a9a5513f3350"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/mrf-reference/constant/MRFProperties",
+      "sha256": "9494dee46684f25f72c543381c8bec17ca87ffe144b74e6a3d83b264834be6eb",
+      "bytes": 786,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/mrf-reference/constant/MRFProperties",
+      "canonicalSourceSha256": "9494dee46684f25f72c543381c8bec17ca87ffe144b74e6a3d83b264834be6eb"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/mrf-reference/system/fvSchemes",
+      "sha256": "a39f77e3cafec249194ae1fab734e45e34c77e37a38f76edc4c1f0335b97884c",
+      "bytes": 1186,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/mrf-reference/system/fvSchemes",
+      "canonicalSourceSha256": "a39f77e3cafec249194ae1fab734e45e34c77e37a38f76edc4c1f0335b97884c"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/mrf-reference/system/fvSolution",
+      "sha256": "43a557eaaf14b9890c1cd63923870d4a4b8aded45543b1d54c5a5811335287da",
+      "bytes": 1692,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/mrf-reference/system/fvSolution",
+      "canonicalSourceSha256": "43a557eaaf14b9890c1cd63923870d4a4b8aded45543b1d54c5a5811335287da"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/0/U",
+      "sha256": "9ae6c4c11690fd0983f3fe03a2d40b57e13be8f764f062516aaace8710ad4ed8",
+      "bytes": 1284,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/0/U",
+      "canonicalSourceSha256": "9ae6c4c11690fd0983f3fe03a2d40b57e13be8f764f062516aaace8710ad4ed8"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/0/epsilon",
+      "sha256": "6147da3b635139f335ee8975cf1e9edeb858ee0bc9ef01a0e72665d4391aeeff",
+      "bytes": 1128,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/0/epsilon",
+      "canonicalSourceSha256": "6147da3b635139f335ee8975cf1e9edeb858ee0bc9ef01a0e72665d4391aeeff"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/0/k",
+      "sha256": "45994110913441b90c6260625c2d370ddf39dd7984f0260261088466d31a9982",
+      "bytes": 1116,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/0/k",
+      "canonicalSourceSha256": "45994110913441b90c6260625c2d370ddf39dd7984f0260261088466d31a9982"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/0/nut",
+      "sha256": "70db359608cf18bc56c9ecada0c4ff8d1b8756d7f6a1000289f8716dd33a39ae",
+      "bytes": 1095,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/0/nut",
+      "canonicalSourceSha256": "70db359608cf18bc56c9ecada0c4ff8d1b8756d7f6a1000289f8716dd33a39ae"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/0/p",
+      "sha256": "dab32d78a0043d816e0c0ab0c3d630d353469281f111d1f3383135cea735580f",
+      "bytes": 1085,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/0/p",
+      "canonicalSourceSha256": "dab32d78a0043d816e0c0ab0c3d630d353469281f111d1f3383135cea735580f"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/constant/dynamicMeshDict",
+      "sha256": "296b91a86de32230c7316b7e87b8d5ba7be15aa6d0b3fb4a55ae5913d46d462e",
+      "bytes": 965,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/constant/dynamicMeshDict",
+      "canonicalSourceSha256": "296b91a86de32230c7316b7e87b8d5ba7be15aa6d0b3fb4a55ae5913d46d462e"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/constant/momentumTransport",
+      "sha256": "47a6ec9c9f4fabefb08a8e2b6af2ab58c11d2c218d0f193d08db3a62994285cd",
+      "bytes": 792,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/constant/momentumTransport",
+      "canonicalSourceSha256": "47a6ec9c9f4fabefb08a8e2b6af2ab58c11d2c218d0f193d08db3a62994285cd"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/constant/physicalProperties",
+      "sha256": "f41e7bf87ed27490fe8f190087c5d716869e3f2df218abd90f57cf199fc46efb",
+      "bytes": 750,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/constant/physicalProperties",
+      "canonicalSourceSha256": "f41e7bf87ed27490fe8f190087c5d716869e3f2df218abd90f57cf199fc46efb"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/system/blockMeshDict",
+      "sha256": "57258898fd6fc7b0fac41b730ce4e1e388c314b176d48a5bb1dc458c90a53689",
+      "bytes": 4212,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/system/blockMeshDict",
+      "canonicalSourceSha256": "57258898fd6fc7b0fac41b730ce4e1e388c314b176d48a5bb1dc458c90a53689"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/system/controlDict",
+      "sha256": "fd70e86304b4b11e62a5e9a8a72609a6708229377f2b96d51a01e1e4137c73d2",
+      "bytes": 1115,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/system/controlDict",
+      "canonicalSourceSha256": "fd70e86304b4b11e62a5e9a8a72609a6708229377f2b96d51a01e1e4137c73d2"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/system/createNonConformalCouplesDict",
+      "sha256": "1d26944e7563c884cb3e8dcbbe1540c1f311a974a43f48281a762b96e9e863d1",
+      "bytes": 2936,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/system/createNonConformalCouplesDict",
+      "canonicalSourceSha256": "1d26944e7563c884cb3e8dcbbe1540c1f311a974a43f48281a762b96e9e863d1"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/system/decomposeParDict",
+      "sha256": "85a98ed3c801e2490565981b68077f9f7579484f02ad552a02c9045e6f758747",
+      "bytes": 726,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/system/decomposeParDict",
+      "canonicalSourceSha256": "85a98ed3c801e2490565981b68077f9f7579484f02ad552a02c9045e6f758747"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/system/functions",
+      "sha256": "9495244249138e8b8fed74f5fcc4dabf6aaa083006acc8facdb1e2b8d5795559",
+      "bytes": 1024,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/system/functions",
+      "canonicalSourceSha256": "9495244249138e8b8fed74f5fcc4dabf6aaa083006acc8facdb1e2b8d5795559"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/system/fvSchemes",
+      "sha256": "6fde049080372bb63fc099ff292f27760356f6a3b22536854d01e685d64f5e1c",
+      "bytes": 1224,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/system/fvSchemes",
+      "canonicalSourceSha256": "6fde049080372bb63fc099ff292f27760356f6a3b22536854d01e685d64f5e1c"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/native/system/fvSolution",
+      "sha256": "74e9bc85f5cdd87cf1c5a0dfd56530f36bba4e6885cafb1e40294edb6cdde11c",
+      "bytes": 1462,
+      "projection": "byte-identical official package-derived impeller/MRF reference/license",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/native/system/fvSolution",
+      "canonicalSourceSha256": "74e9bc85f5cdd87cf1c5a0dfd56530f36bba4e6885cafb1e40294edb6cdde11c"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12-impeller/provenance.json",
+      "sha256": "d8fe70bf0f11ac4dbbdb1f8eb5402bf03f99a45f51ff2dfc93117cc64700481c",
+      "bytes": 5486,
+      "projection": "exact official package fixture provenance",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12-impeller/provenance.json",
+      "canonicalSourceSha256": "d8fe70bf0f11ac4dbbdb1f8eb5402bf03f99a45f51ff2dfc93117cc64700481c"
     },
     {
       "path": "tools/cfd_worker/fixtures/openfoam12/COPYING",
@@ -440,11 +649,11 @@
     },
     {
       "path": "tools/cfd_worker/run.py",
-      "sha256": "f34025dff8c577714b80afd864e118ee309de99de93fb953f306322e2d5106a0",
-      "bytes": 2675,
+      "sha256": "ec3da69570d12c6b87a8bc599e2519e8b604750e073f263fbe35e573995fc1f5",
+      "bytes": 2630,
       "projection": "fixed educational CLI; private file ingress removed",
       "canonicalSourcePath": "tools/cfd_worker/run.py",
-      "canonicalSourceSha256": "7d4ab07c04e8b178531c6a3e3024fd9920e58375f150fa80c8c2e37d718754de"
+      "canonicalSourceSha256": "7a60018f2b68beb5e3851bf2ec3bcb92735575cd12d2381af10f1581ffe503c6"
     },
     {
       "path": "tools/cfd_worker/software_release.py",

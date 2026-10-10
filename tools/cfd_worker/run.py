@@ -9,11 +9,12 @@ sys.path.insert(0, str(ROOT / 'services/cfd_worker/src'))
 from untirta_cfd_worker import capability_report
 from untirta_cfd_worker.contracts import WorkerDiagnostic, digest, write_json
 from untirta_cfd_worker.runner import execute_job
+from untirta_cfd_worker.profiles import IMPELLER_PROFILES, benchmark_reference
 
 def main():
     parser = argparse.ArgumentParser(description='Isolated CFD runner; no commands, secrets, Main API or Pump Database')
     parser.add_argument('--capabilities', action='store_true')
-    parser.add_argument('--benchmark', choices=('transient-cavity-v1', 'cavitation-bullet-v1'))
+    parser.add_argument('--benchmark', choices=('transient-cavity-v1', 'cavitation-bullet-v1', *IMPELLER_PROFILES))
     parser.add_argument('--restart-smoke', action='store_true', help='Fixed cavity only: native 0.05 s checkpoint reopen and one physical step; no restart equivalence claim')
     parser.add_argument('--workspace', type=Path, default=ROOT / 'outputs/cfd-worker')
     parser.add_argument('--report', type=Path)
@@ -24,7 +25,7 @@ def main():
     if args.restart_smoke and args.benchmark != 'transient-cavity-v1':
         parser.error('--restart-smoke requires the fixed --benchmark transient-cavity-v1.')
     if args.benchmark:
-        reference = {'schemaVersion': 'untirta.cfd-benchmark-reference.v1', 'kind': 'development-benchmark', 'caseProfile': args.benchmark, 'sourceCommit': '0b487fc98b88d3e8dc3c3ead4662e7632dd5e7dd'}
+        reference = benchmark_reference(args.benchmark)
         source = {'schemaVersion': 'untirta.cfd-worker-job.v1', 'studyId': args.benchmark, 'inputRevision': 'fixture-v3' if args.benchmark == 'cavitation-bullet-v1' else 'fixture-v1', 'adapter': 'openfoam', 'caseProfile': args.benchmark, 'referenceSha256': digest(reference), 'limits': {'memoryBytes': 2147483648, 'timeoutSeconds': 1200, 'diskBytes': 268435456, 'logBytes': 2097152, 'threads': 1}, 'parameters': {}}
     else:
         parser.error('Select a fixed educational --benchmark; application inputs are not accepted.')

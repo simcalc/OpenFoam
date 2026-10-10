@@ -164,10 +164,16 @@ def _validate(data: Any, *, binding: dict, files: dict[str, bytes] | None, expec
             fail('CFD_CHECKPOINT_MRF_TIME_MISMATCH', 'MRF has a fixed mesh; do not label a rotor angle as physical mesh motion.')
     if data['meshPositionSha256'] != digest({'meshSha256': data['meshSha256'], 'motion': motion}):
         fail('CFD_CHECKPOINT_MESH_POSITION_MISMATCH', 'Use the mesh and rotor position saved at this exact native time step.')
-    if not isinstance(interface, dict) or set(interface) != {'type', 'identifiers', 'configurationSha256'} or interface['type'] not in ('none', 'AMI', 'sliding', 'turbo'):
+    if not isinstance(interface, dict) or set(interface) != {'type', 'identifiers', 'configurationSha256'} or interface['type'] not in ('none', 'AMI', 'NCC', 'sliding', 'turbo'):
         fail('CFD_CHECKPOINT_INTERFACE_REQUIRED', 'Declare the exact rotor/stator interface configuration.')
     if not isinstance(interface['identifiers'], list) or len(interface['identifiers']) > 64 or any((not isinstance(v, str) or not v or len(v) > 120 for v in interface['identifiers'])):
         fail('CFD_CHECKPOINT_INTERFACE_REQUIRED', 'Use bounded actual interface identifiers.')
+    if interface['type'] == 'NCC':
+        from .profiles import IMPELLER_PROFILES, IMPELLER_NCC_DICT_SHA256
+        names = ['nonConformalCouple' + side + str(angle) for side in ('In', 'Out') for angle in range(0, 360, 30)]
+        expected_mode = 'sliding-mesh' if method['id'] == 'impeller-transient-v1' else 'mrf'
+        if solver != {'adapter': 'openfoam', 'distribution': 'OpenFOAM-Foundation', 'version': '12'} or method['id'] not in IMPELLER_PROFILES or method['rotationModel'] != expected_mode or (interface['identifiers'] != names) or (interface['configurationSha256'] != IMPELLER_NCC_DICT_SHA256):
+            fail('CFD_CHECKPOINT_NCC_PROFILE_MISMATCH', 'NCC currently requires the exact reviewed Foundation 12 impeller method, source coupling configuration and rotor frame; it cannot be relabeled as AMI or an arbitrary solver interface.')
     if interface['type'] == 'none':
         if interface['identifiers'] or interface['configurationSha256'] is not None or motion['mode'] == 'sliding-mesh':
             fail('CFD_CHECKPOINT_INTERFACE_REQUIRED', 'Physical sliding mesh needs a saved rotor/stator interface binding.')
