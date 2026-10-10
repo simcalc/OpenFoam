@@ -114,6 +114,18 @@ def replace_entry(path: Path, name: str, value: str) -> None:
         raise WorkerDiagnostic('CFD_FIXTURE_SETUP_INVALID', 'The pinned fixture setting is missing or duplicated.')
     path.write_text(content)
 
+def verify_mesh_log(log: str) -> dict:
+    """Require completed all-geometry/all-topology checks before fluid solve."""
+    failed = re.search('(?m)^\\s*Failed\\s+\\d+\\s+mesh checks?\\.\\s*$', log)
+    concave_cells = re.search('Concave cells[^\\n]*number of cells:\\s*[1-9]\\d*', log)
+    concave_faces = re.search('There are\\s+[1-9]\\d*\\s+faces with concave angles', log)
+    complete = len(re.findall('(?m)^\\s*Mesh OK\\.\\s*$', log)) == 1 and bool(re.search('(?m)^\\s*End\\s*$', log))
+    full_checks = bool(re.search('(?m)^\\s*Enabling all \\(cell, face, edge, point\\) topology checks\\.\\s*$', log)) and bool(re.search('(?m)^\\s*Enabling all geometry checks\\.\\s*$', log))
+    cells = re.findall('(?m)^\\s*cells:\\s*(\\d+)\\s*$', log)
+    if failed or concave_cells or concave_faces or (not complete) or (not full_checks) or (len(cells) != 1) or (int(cells[0]) <= 0):
+        raise WorkerDiagnostic('CFD_MESH_CHECK_FAILED', 'Repair the derived mesh and rerun checkMesh -allGeometry -allTopology to a complete Mesh OK result without concave cells/faces; no potential-flow or physical solver stage may follow a failed mesh.')
+    return {'passed': True, 'cellCount': int(cells[0]), 'checks': ['allGeometry', 'allTopology'], 'meshCheck': 'Mesh OK'}
+
 def prepare(job: Job, workspace: Path, fixture_root: Path) -> tuple[Path, list[list[str]], dict]:
     import json
     provenance = json.loads((fixture_root / 'provenance.json').read_text())
@@ -134,6 +146,8 @@ def prepare(job: Job, workspace: Path, fixture_root: Path) -> tuple[Path, list[l
         snappy = case / 'system' / 'snappyHexMeshDict'
         replace_entry(snappy, 'maxGlobalCells', '100000')
         replace_entry(snappy, 'maxLocalCells', '100000')
+        replace_entry(snappy, 'snap', 'false')
+        replace_entry(snappy, 'addLayers', 'false')
         original = snappy.read_text()
         changed = original.replace('level (4 4);', 'level (2 2);').replace('levels ((0.0 3));', 'levels ((0.0 1));')
         if changed == original:
@@ -141,12 +155,15 @@ def prepare(job: Job, workspace: Path, fixture_root: Path) -> tuple[Path, list[l
         snappy.write_text(changed)
         for name in ('U', 'p_rgh'):
             shutil.copyfile(case / '0' / (name + '.orig'), case / '0' / name)
-        stages += [['snappyHexMesh', '-overwrite', '-case', str(case)], ['potentialFoam', '-pName', 'p_rgh', '-case', str(case)]]
+        stages += [['snappyHexMesh', '-overwrite', '-case', str(case)]]
         physical_label = 'physical-transient-cavitation-development-benchmark'
     for name, value in changes.items():
         replace_entry(control, name, value)
-    stages += [['checkMesh', '-allGeometry', '-allTopology', '-case', str(case)], ['foamRun', '-case', str(case)]]
-    metadata = {'distribution': 'OpenFOAM-Foundation', 'version': '12', 'sourceCommit': provenance['commit'], 'profile': job.profile, 'physicalModel': physical_label, 'benchmarkOverrides': changes, 'meshOverride': {'surfaceLevel': 2, 'regionLevel': 1, 'maxCells': 100000} if job.profile == 'cavitation-bullet-v1' else None, 'quantityClaim': 'development-only; no Pump performance, NPSHR, NPSH3 or engineering acceptance claim'}
+    stages += [['checkMesh', '-allGeometry', '-allTopology', '-case', str(case)]]
+    if job.profile == 'cavitation-bullet-v1':
+        stages += [['potentialFoam', '-pName', 'p_rgh', '-case', str(case)]]
+    stages += [['foamRun', '-case', str(case)]]
+    metadata = {'distribution': 'OpenFOAM-Foundation', 'version': '12', 'sourceCommit': provenance['commit'], 'profile': job.profile, 'physicalModel': physical_label, 'benchmarkOverrides': changes, 'meshOverride': {'surfaceLevel': 2, 'regionLevel': 1, 'maxCells': 100000, 'snap': False, 'addLayers': False, 'meshProfileRevision': 'castellated-staircase-v2', 'geometryApproximation': 'castellated-staircase'} if job.profile == 'cavitation-bullet-v1' else None, 'meshLimitations': ['Castellated staircase cells approximate the immutable STL boundary; no exact smooth surface geometry claim.', 'No snapping or boundary layers; coarse development mesh is not mesh-independent or suitable for quantitative cavitation/Pump claims.'] if job.profile == 'cavitation-bullet-v1' else [], 'quantityClaim': 'development-only; no Pump performance, NPSHR, NPSH3 or engineering acceptance claim'}
     return (case, stages, metadata)
 
 def field_values(path: Path) -> list[float]:
@@ -165,7 +182,8 @@ def field_values(path: Path) -> list[float]:
 def collect(job: Job, workspace: Path, case: Path, *, log_name='foamRun.log', target_time=None, minimum_time=0, checkpoint_prefix='', step_offset=0) -> dict:
     solver_log = (workspace / 'output' / 'logs' / log_name).read_text(errors='replace')
     mesh_log = (workspace / 'output' / 'logs' / 'checkMesh.log').read_text(errors='replace')
-    if 'Mesh OK.' not in mesh_log or not re.search('(?m)^End\\s*$', solver_log):
+    verify_mesh_log(mesh_log)
+    if not re.search('(?m)^End\\s*$', solver_log):
         raise WorkerDiagnostic('CFD_NUMERICAL_RUN_INCOMPLETE', 'The solver or mesh acceptance did not complete; inspect stage logs.')
     folders = sorted((p for p in case.iterdir() if p.is_dir() and re.fullmatch('\\d+(?:\\.\\d+)?(?:e[-+]?\\d+)?', p.name)), key=lambda p: float(p.name))
     solved = [folder for folder in folders if float(folder.name) > minimum_time]

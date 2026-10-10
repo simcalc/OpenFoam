@@ -1,5 +1,6 @@
 """Contract tests only; these tests never claim a Fluent/OpenFOAM solver run."""
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -7,11 +8,21 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'services/cfd_worker/src'))
 from untirta_cfd_worker.contracts import Job,WorkerDiagnostic,digest
 from untirta_cfd_worker.capabilities import capability_report
 class ReleaseBoundary(unittest.TestCase):
+    def test_cli_uses_distinct_fixed_profile_revisions_without_solver(self):
+        spec=importlib.util.spec_from_file_location('benchmark_cli_contract',ROOT/'tools/cfd_worker/run.py');cli=importlib.util.module_from_spec(spec);spec.loader.exec_module(cli)
+        for profile,revision in (('transient-cavity-v1','fixture-v1'),('cavitation-bullet-v1','fixture-v2')):
+            with patch.object(sys,'argv',['run.py','--benchmark',profile]),patch.object(cli,'execute_job',return_value={'actualCfdRun':False,'status':'ContractOnly'}) as execute,patch('sys.stdout',new=io.StringIO()):
+                self.assertEqual(cli.main(),2)
+            source,reference=execute.call_args.args[:2]
+            self.assertEqual(source['inputRevision'],revision);self.assertEqual(source['caseProfile'],profile)
+            self.assertEqual(source['parameters'],{});self.assertEqual(source['referenceSha256'],digest(reference))
+            self.assertEqual(Job.parse(source,reference).revision,revision)
     @unittest.skipUnless(sys.platform=='linux','Actual /usr/bin/env transport requires the Linux runner; no OpenFOAM execution claim.')
     def test_explicit_loader_assignment_survives_sanitized_environment(self):
         environment=dict(os.environ);environment.pop('LD_LIBRARY_PATH',None)
@@ -56,7 +67,7 @@ class ReleaseBoundary(unittest.TestCase):
     def test_fixed_profiles_only(self):
         for profile in ('transient-cavity-v1','cavitation-bullet-v1'):
             ref={'schemaVersion':'untirta.cfd-benchmark-reference.v1','kind':'development-benchmark','caseProfile':profile,'sourceCommit':'0b487fc98b88d3e8dc3c3ead4662e7632dd5e7dd'}
-            source={'schemaVersion':'untirta.cfd-worker-job.v1','studyId':profile,'inputRevision':'fixture-v1','adapter':'openfoam','caseProfile':profile,'referenceSha256':digest(ref),'limits':{},'parameters':{}}
+            source={'schemaVersion':'untirta.cfd-worker-job.v1','studyId':profile,'inputRevision':'fixture-v2' if profile=='cavitation-bullet-v1' else 'fixture-v1','adapter':'openfoam','caseProfile':profile,'referenceSha256':digest(ref),'limits':{},'parameters':{}}
             self.assertEqual(Job.parse(source,ref).profile,profile)
             source['parameters']={'rpm':2900}
             with self.assertRaises(WorkerDiagnostic): Job.parse(source,ref)

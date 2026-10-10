@@ -106,6 +106,8 @@ def execute_job(source: dict[str, Any], reference: dict[str, Any], workspace_roo
                     openfoam.save_initial_state(job, workspace, case)
                 result = runner.run([executable] + stage[1:], case, workspace / 'output' / 'logs' / (stage[0] + '.log'))
                 manifest['stages'].append({'name': stage[0], **result})
+                if stage[0] == 'checkMesh':
+                    manifest['meshAcceptance'] = openfoam.verify_mesh_log((workspace / 'output/logs/checkMesh.log').read_text(errors='replace'))
             result = openfoam.collect(job, workspace, case)
             if restart_smoke:
                 source_states = [validate_checkpoint(workspace, workspace / path, job.binding()) for path in result['nativeCheckpointFiles']]

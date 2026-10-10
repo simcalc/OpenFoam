@@ -48,11 +48,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "1e3aa0dbef6ddc888473b45ba416dd5d6ab477aa5b86541f64af7d3ea6f89167",
-      "bytes": 4947,
+      "sha256": "ce745018e9e58493741b8e18b18397cbbf6f990c64d2797542c696346e0a364e",
+      "bytes": 5590,
       "projection": "canonical small public release template",
       "canonicalSourcePath": "deployment/cfd-public/README.md",
-      "canonicalSourceSha256": "ad3e16457da8efd57c2f6195592519759d7c6b51270bc8b9ae260b6b1b93ca93"
+      "canonicalSourceSha256": "b9ed3071a5a9ddad202623b5ea99b9b786e28506f6545549fd6a595caa775a50"
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/__init__.py",
@@ -96,11 +96,11 @@
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/openfoam.py",
-      "sha256": "4350b7b537fc4fb0b7c4d194838c001b79719b20fca0bb29b7d941ed0e60faac",
-      "bytes": 18178,
+      "sha256": "389a2f4837b449640ca92106e6380225d48855b2cc1c295464e0152c475cda69",
+      "bytes": 20068,
       "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
       "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/openfoam.py",
-      "canonicalSourceSha256": "54e93a7df7f07206fcd831578298b612d608d5e2c1bb3e9dc3439d0a76a216d0"
+      "canonicalSourceSha256": "675b8f00cb57dbf1dcd76ef6e4c32a040f7404ff137a5ba60a9acfd80e326687"
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/process_gate.py",
@@ -120,19 +120,19 @@
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/runner.py",
-      "sha256": "99c8e0d88e0b9247f883554f41bc6a0135e31f8d0a559058f716037a947cb221",
-      "bytes": 11814,
+      "sha256": "3160f2ed7850fe41b010808309cfed7fe5740746170981c9a48f125082f4e162",
+      "bytes": 12003,
       "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
       "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/runner.py",
-      "canonicalSourceSha256": "873f8faf712734f1950f7e9c22c3a4aaead607144ffe503d1986b3e6333f5e84"
+      "canonicalSourceSha256": "79d488ba44038ceaabf5456c6c22679035952ae774ca1a134fff49865986d1ab"
     },
     {
       "path": "tests/test_release_boundary.py",
-      "sha256": "a6f5b102b112b77ff03992bf744befc17e1ed8a8f383ec37aff9d9b78effff86",
-      "bytes": 9269,
+      "sha256": "47c7341f0764cd59266254c8ce69a8dcb4489cf9f877cab97e32fd0b527865e6",
+      "bytes": 10354,
       "projection": "canonical small public release template",
       "canonicalSourcePath": "deployment/cfd-public/test_release_boundary.py",
-      "canonicalSourceSha256": "0256f51e497740f82faae82177b5e572682636e7643338029b3ea4a30df3017b"
+      "canonicalSourceSha256": "3a34385fdd1614d442d690eddcb827d15b7ff705a49701d2a1ba8f41d6b251e6"
     },
     {
       "path": "tools/cfd_worker/fixtures/openfoam12/COPYING",
@@ -416,19 +416,19 @@
     },
     {
       "path": "tools/cfd_worker/run.py",
-      "sha256": "5d8ae9d248505f6e10e662a4723d0b4bb1ccaf0a5e273b548c2cb52014a82db3",
-      "bytes": 2613,
+      "sha256": "a981c071745d1b205ced4dea3c705bcadc3b480307558cdf096362b113e2f16f",
+      "bytes": 2675,
       "projection": "fixed educational CLI; private file ingress removed",
       "canonicalSourcePath": "tools/cfd_worker/run.py",
-      "canonicalSourceSha256": "afb9679346648814cd53fd0483a8e510d24f0c35fb67579ddfc02177fe12ac75"
+      "canonicalSourceSha256": "7ba9f8552702da06f32a9cf4087f1d607e22d409db5b536821566dee4afff4eb"
     },
     {
       "path": "tools/cfd_worker/verify_educational_run.py",
-      "sha256": "af56da4dd92ed698d399f2cc6c0eaf72b04958d6b386ace85aa492d83b22d403",
-      "bytes": 46696,
+      "sha256": "6733c65718900d1b6d1ed525397e23c562b1a9d4a31e2e270fa5ed3b007c38de",
+      "bytes": 49840,
       "projection": "same bounded educational output tool",
       "canonicalSourcePath": "tools/cfd_worker/verify_educational_run.py",
-      "canonicalSourceSha256": "af56da4dd92ed698d399f2cc6c0eaf72b04958d6b386ace85aa492d83b22d403"
+      "canonicalSourceSha256": "6733c65718900d1b6d1ed525397e23c562b1a9d4a31e2e270fa5ed3b007c38de"
     }
   ]
 }
