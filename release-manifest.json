@@ -80,11 +80,11 @@
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/artifacts.py",
-      "sha256": "7451d02e3a5da2548f1f6c31e9695bdc83b14ea23ce495ea0c91d8ad7e1f45af",
-      "bytes": 25330,
+      "sha256": "3700e624025cf76ea655ec7c03c1d5a9f660937884b5278c57c3d2333802818e",
+      "bytes": 25885,
       "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
       "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/artifacts.py",
-      "canonicalSourceSha256": "7551ed635e9c199b083b0279238dbd8f02ec9b92b33250f1ff11dcdde4c67f55"
+      "canonicalSourceSha256": "6c8baa66cf6b50038a4547a2ccd50532164ac75d8c164afd8c90c37fd7379356"
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/capabilities.py",

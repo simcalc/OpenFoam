@@ -293,6 +293,10 @@ def _workspace(root: Path) -> Path:
 
 def create_artifact_bytes(*, artifact_id: str, binding: dict, solver: dict, method: dict, evidence_role: str, provenance: dict, lifecycle: dict, files: dict[str, tuple[bytes, str]]) -> bytes:
     """Export inert declared files; suitable for adapters and labeled contract fixtures."""
+    unsupported = sorted({path.rsplit('/', 1)[-1] for path, (_, role) in files.items() if role == 'native' and path.rsplit('/', 1)[-1] not in NATIVE_NAMES and (not path.endswith(('.cas.h5', '.dat.h5', '.msh.h5', '.stl', '.obj')))})
+    if unsupported:
+        names = ', '.join((name for name in unsupported if re.fullmatch('[A-Za-z0-9_.-]{1,80}', name)))[:512]
+        fail('CFD_ARTIFACT_NATIVE_TYPE_PROHIBITED', 'Review the actual unsupported native basenames before export: ' + (names or 'invalid basename') + '. Keep scripts/executables prohibited.')
     manifest = {'schemaVersion': SCHEMA, 'artifactId': artifact_id, 'binding': binding, 'solver': solver, 'method': method, 'evidenceRole': evidence_role, 'provenance': provenance, 'lifecycle': lifecycle, 'files': [{'path': path, 'sha256': sha256(raw).hexdigest(), 'bytes': len(raw), 'role': role} for path, (raw, role) in files.items()], 'checkpoints': [p for p, (_, role) in files.items() if role == 'checkpoint'], 'timeHistories': [p for p, (_, role) in files.items() if role == 'time-history'], 'temporalEvidence': [p for p, (_, role) in files.items() if role == 'temporal-evidence']}
     manifest['manifestChecksum'] = digest(manifest)
     limits = ArtifactLimits()
