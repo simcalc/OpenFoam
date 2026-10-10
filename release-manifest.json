@@ -56,11 +56,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "6f843935d03cc287fef987172f8cc313d268da06f910d6333bce473147d63c0b",
-      "bytes": 10086,
+      "sha256": "6f2ca7909cd75d45ebf97839e8d3cf60a40700862cbc5e5790460d6dd2331a5a",
+      "bytes": 10723,
       "projection": "canonical small public release template",
       "canonicalSourcePath": "deployment/cfd-public/README.md",
-      "canonicalSourceSha256": "b770ec666fd6d3c42c1ab66ce3cd28526830fdea589c180271f7565d7d285e06"
+      "canonicalSourceSha256": "bc06af1b814d715cc160423125c62e9a98254b0f86217aedcf1832bd302359ec"
     },
     {
       "path": "docs/software-release-INSTALL.md",

@@ -37,10 +37,12 @@ Python educational verification reports equations in Input -> Substitution -> Re
 | Route | Actual workflow | Result and limit |
 | --- | --- | --- |
 | Complete software Release | [38043948163](https://github.com/simcalc/OpenFoam/actions/runs/38043948163), source commit `61f9067` | SUCCESS; all nine custom assets published, with anonymous download bytes and checksums verified. No installation or solver execution occurs in this workflow. |
-| Transient cavity | [38043951905](https://github.com/simcalc/OpenFoam/actions/runs/38043951905) | SUCCESS for the bounded educational workflow. This does not establish real-pump or NPSHr acceptance. |
-| Cavitation bullet | [38043949962](https://github.com/simcalc/OpenFoam/actions/runs/38043949962) | Strict mesh checks passed for 11,089 cells. Field-unit collection failed and is under investigation; the complete CFD result is not accepted. |
+| Transient cavity | [38045996897](https://github.com/simcalc/OpenFoam/actions/runs/38045996897), source commit `e316ad7837b2a4794aa5faceca24e9ae072b014c` | SUCCESS for the bounded educational workflow. This does not establish real-pump or NPSHr acceptance. |
+| Cavitation bullet | [38045993669](https://github.com/simcalc/OpenFoam/actions/runs/38045993669), same source commit | SUCCESS; strict mesh checks passed for 11,089 cells, and 35 physical steps reached 1e-5 s. Native-artifact verification passed with no diagnostics. |
 
-The software is available independently of the remaining cavitation diagnostic. Overall CFD acceptance is not CLEAN, and neither benchmark establishes NPSHr/NPSH3.
+The Cavitation native fields `U`, `p_rgh` and `alpha.water` are finite with explicit SI dimensions; paired checkpoints at 5e-6 s and 1e-5 s bind the exported state to the input, mesh and settings. The auxiliary `Phi` mapping preserves original source bytes without a filename collision. Canonical native verification returned `valid=true` and `diagnostics=[]`.
+
+Both bounded educational workflows have succeeded. Acceptance is limited to the documented execution and native-integrity checks; neither benchmark establishes quantitative Pump results, NPSHr/NPSH3, developed cavitation, mesh or temporal convergence, conservation qualification, or experimental validation.
 
 ## Source and licensing
 
@@ -69,6 +71,6 @@ b3dcd9a636a5a827bf43ffcf0156922ba6db492123f035eae1046ee759602dd1
 
 The fixed manual workflow verified the original package bytes and identity, then verified the published assets through anonymous downloads. See [SHA256SUMS](https://github.com/simcalc/OpenFoam/releases/download/openfoam12-20250206/SHA256SUMS) for the complete asset checksums.
 
-The nine custom assets are the `.deb`, `openfoam12_20250206-corresponding-source.tar.gz`, `COPYING`, `INSTALL.md`, `INVENTORY.json`, `INVENTORY.md`, `RELEASE.json`, `SHA256SUMS` and `RELEASE-NOTES.md`. The inventory records every member of the OpenFOAM tree extracted from the checksum-verified `.deb`, with package identity/control metadata recorded separately. Read the [Ubuntu installation instructions](docs/software-release-INSTALL.md) for package verification and dependencies. This source-preparation document does not claim successful cavitation field acceptance or NPSHr/NPSH3 merely because the software assets are available.
+The nine custom assets are the `.deb`, `openfoam12_20250206-corresponding-source.tar.gz`, `COPYING`, `INSTALL.md`, `INVENTORY.json`, `INVENTORY.md`, `RELEASE.json`, `SHA256SUMS` and `RELEASE-NOTES.md`. The inventory records every member of the OpenFOAM tree extracted from the checksum-verified `.deb`, with package identity/control metadata recorded separately. Read the [Ubuntu installation instructions](docs/software-release-INSTALL.md) for package verification and dependencies. This source-preparation document does not claim quantitative Pump/NPSHr/NPSH3 results or convergence qualification merely because the software assets and educational benchmark outputs are available.
 
 The `.deb` contains OpenFOAM software; it is not a Windows installer and does not include every Ubuntu dependency. This pilot installs it only on the disposable GitHub Ubuntu VM, where measured total archives were 181 MB including 68.5 MB dependencies, and additional installed software occupied 852 MB. No laptop installation is performed. The software Release asset is separate from bounded 25 MiB simulation-result artifacts. The private `npsh` repository remains the canonical source of the full application and export logic; this public repository exposes only the reviewed educational package and official software distribution asset.
