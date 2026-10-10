@@ -14,6 +14,21 @@ sys.path.insert(0,str(ROOT/'services/cfd_worker/src'))
 from untirta_cfd_worker.contracts import Job,WorkerDiagnostic,digest
 from untirta_cfd_worker.capabilities import capability_report
 class ReleaseBoundary(unittest.TestCase):
+    def test_reviewed_phase_flux_and_mesh_labels_keep_native_execution_prohibited(self):
+        from untirta_cfd_worker.artifacts import ArtifactLimits,_role_path
+        limits=ArtifactLimits()
+        for path,content in (('output/native-case/0.00001/alphaPhi.water',b'dimensions [0 3 -1 0 0 0 0];\ninternalField uniform 0;'),
+                             ('output/native-case/constant/polyMesh/surfaceIndex',b'2\n(\n-1\n0\n)')):
+            _role_path(path,'native',limits,content)
+        for name in ('alphaPhi0.water','surfaceIndex.py','Allrun'):
+            with self.assertRaises(WorkerDiagnostic) as stopped:
+                _role_path('output/native-case/1/'+name,'native',limits,b'inert contract')
+            self.assertEqual(stopped.exception.code,'CFD_ARTIFACT_NATIVE_TYPE_PROHIBITED')
+        for active in (b'#codeStream { code #{ system("command"); #}; };',b'libs ("unreviewed.so");'):
+            with self.assertRaises(WorkerDiagnostic) as stopped:
+                _role_path('output/native-case/1/alphaPhi.water','native',limits,active)
+            self.assertEqual(stopped.exception.code,'CFD_ARTIFACT_ACTIVE_DICTIONARY_PROHIBITED')
+
     def test_native_dimensionless_writer_format_keeps_pressure_units_distinct(self):
         from untirta_cfd_worker.openfoam import field_dimensions
         original=ROOT/'tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/0/alpha.water'
