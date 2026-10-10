@@ -16,6 +16,7 @@ import stat
 import unicodedata
 import uuid
 import zipfile
+import zlib
 from .checkpoint import assess_temporal_evidence, diagnostic, fail, file_descriptors, safe_path, strict_json, validate_binding, validate_checkpoint_descriptor, validate_time_history, ID, SHA
 from .contracts import WorkerDiagnostic, digest
 SCHEMA = 'untirta.cfd-artifact.v1'
@@ -294,11 +295,20 @@ def create_artifact_bytes(*, artifact_id: str, binding: dict, solver: dict, meth
     """Export inert declared files; suitable for adapters and labeled contract fixtures."""
     manifest = {'schemaVersion': SCHEMA, 'artifactId': artifact_id, 'binding': binding, 'solver': solver, 'method': method, 'evidenceRole': evidence_role, 'provenance': provenance, 'lifecycle': lifecycle, 'files': [{'path': path, 'sha256': sha256(raw).hexdigest(), 'bytes': len(raw), 'role': role} for path, (raw, role) in files.items()], 'checkpoints': [p for p, (_, role) in files.items() if role == 'checkpoint'], 'timeHistories': [p for p, (_, role) in files.items() if role == 'time-history'], 'temporalEvidence': [p for p, (_, role) in files.items() if role == 'temporal-evidence']}
     manifest['manifestChecksum'] = digest(manifest)
+    limits = ArtifactLimits()
+    if any((len(raw) > limits.file_bytes for raw, _ in files.values())) or sum((len(raw) for raw, _ in files.values())) > limits.total_bytes:
+        fail('CFD_ARTIFACT_BUDGET_EXCEEDED', 'Reduce native evidence to the existing per-file and total byte budgets before packaging.')
     output = BytesIO()
     with zipfile.ZipFile(output, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr('manifest.json', json.dumps(manifest, allow_nan=False).encode())
+
+        def write_member(path, content):
+            compressor = zlib.compressobj(wbits=-15)
+            compressed_bytes = len(compressor.compress(content) + compressor.flush())
+            method = zipfile.ZIP_STORED if len(content) > max(1, compressed_bytes) * limits.compression_ratio else zipfile.ZIP_DEFLATED
+            archive.writestr(path, content, compress_type=method)
+        write_member('manifest.json', json.dumps(manifest, allow_nan=False).encode())
         for path, (raw, _) in files.items():
-            archive.writestr(path, raw)
+            write_member(path, raw)
     raw = output.getvalue()
     report = inspect_artifact(raw, expected_binding=binding)
     if not report['valid']:
