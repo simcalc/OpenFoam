@@ -149,7 +149,7 @@ def prepare(job: Job, workspace: Path, fixture_root: Path) -> tuple[Path, list[l
         replace_entry(snappy, 'snap', 'false')
         replace_entry(snappy, 'addLayers', 'false')
         original = snappy.read_text()
-        changed = original.replace('level (4 4);', 'level (2 2);').replace('levels ((0.0 3));', 'levels ((0.0 1));')
+        changed = original.replace('level (4 4);', 'level (0 0);').replace('levels ((0.0 3));', 'levels ((0.0 0));')
         if changed == original:
             raise WorkerDiagnostic('CFD_FIXTURE_SETUP_INVALID', 'The expected development mesh profile was not found.')
         snappy.write_text(changed)
@@ -163,7 +163,7 @@ def prepare(job: Job, workspace: Path, fixture_root: Path) -> tuple[Path, list[l
     if job.profile == 'cavitation-bullet-v1':
         stages += [['potentialFoam', '-pName', 'p_rgh', '-case', str(case)]]
     stages += [['foamRun', '-case', str(case)]]
-    metadata = {'distribution': 'OpenFOAM-Foundation', 'version': '12', 'sourceCommit': provenance['commit'], 'profile': job.profile, 'physicalModel': physical_label, 'benchmarkOverrides': changes, 'meshOverride': {'surfaceLevel': 2, 'regionLevel': 1, 'maxCells': 100000, 'snap': False, 'addLayers': False, 'meshProfileRevision': 'castellated-staircase-v2', 'geometryApproximation': 'castellated-staircase'} if job.profile == 'cavitation-bullet-v1' else None, 'meshLimitations': ['Castellated staircase cells approximate the immutable STL boundary; no exact smooth surface geometry claim.', 'No snapping or boundary layers; coarse development mesh is not mesh-independent or suitable for quantitative cavitation/Pump claims.'] if job.profile == 'cavitation-bullet-v1' else [], 'quantityClaim': 'development-only; no Pump performance, NPSHR, NPSH3 or engineering acceptance claim'}
+    metadata = {'distribution': 'OpenFOAM-Foundation', 'version': '12', 'sourceCommit': provenance['commit'], 'profile': job.profile, 'physicalModel': physical_label, 'benchmarkOverrides': changes, 'meshOverride': {'surfaceLevel': 0, 'regionLevel': 0, 'maxCells': 100000, 'snap': False, 'addLayers': False, 'meshProfileRevision': 'castellated-staircase-uniform-v3', 'geometryApproximation': 'castellated-staircase'} if job.profile == 'cavitation-bullet-v1' else None, 'meshLimitations': ['Castellated staircase cells approximate the immutable STL boundary; no exact smooth surface geometry claim.', 'Unchanged native 15 x 15 x 50 background, no local refinement: approximately five cells across the source 0.01 m bullet diameter.', 'No snapping or boundary layers; coarse development mesh is not mesh-independent or suitable for quantitative geometry, cavitation-model or Pump acceptance claims.'] if job.profile == 'cavitation-bullet-v1' else [], 'quantityClaim': 'development-only; no Pump performance, NPSHR, NPSH3 or engineering acceptance claim'}
     return (case, stages, metadata)
 
 def field_values(path: Path) -> list[float]:

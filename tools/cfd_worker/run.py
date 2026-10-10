@@ -25,7 +25,7 @@ def main():
         parser.error('--restart-smoke requires the fixed --benchmark transient-cavity-v1.')
     if args.benchmark:
         reference = {'schemaVersion': 'untirta.cfd-benchmark-reference.v1', 'kind': 'development-benchmark', 'caseProfile': args.benchmark, 'sourceCommit': '0b487fc98b88d3e8dc3c3ead4662e7632dd5e7dd'}
-        source = {'schemaVersion': 'untirta.cfd-worker-job.v1', 'studyId': args.benchmark, 'inputRevision': 'fixture-v2' if args.benchmark == 'cavitation-bullet-v1' else 'fixture-v1', 'adapter': 'openfoam', 'caseProfile': args.benchmark, 'referenceSha256': digest(reference), 'limits': {'memoryBytes': 2147483648, 'timeoutSeconds': 1200, 'diskBytes': 268435456, 'logBytes': 2097152, 'threads': 1}, 'parameters': {}}
+        source = {'schemaVersion': 'untirta.cfd-worker-job.v1', 'studyId': args.benchmark, 'inputRevision': 'fixture-v3' if args.benchmark == 'cavitation-bullet-v1' else 'fixture-v1', 'adapter': 'openfoam', 'caseProfile': args.benchmark, 'referenceSha256': digest(reference), 'limits': {'memoryBytes': 2147483648, 'timeoutSeconds': 1200, 'diskBytes': 268435456, 'logBytes': 2097152, 'threads': 1}, 'parameters': {}}
     else:
         parser.error('Select a fixed educational --benchmark; application inputs are not accepted.')
     try:

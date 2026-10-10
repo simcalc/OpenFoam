@@ -37,8 +37,8 @@ PROFILES = {
                            'artifact': 'cavitation-cfd-development-evidence', 'time': 0.00001,
                            'solverStep': 'Real bounded cavitation development fixture'}}
 NUM = r'[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?'
-BULLET_MESH_V2={'surfaceLevel':2,'regionLevel':1,'maxCells':100000,'snap':False,'addLayers':False,
-                'meshProfileRevision':'castellated-staircase-v2','geometryApproximation':'castellated-staircase'}
+BULLET_MESH_V3={'surfaceLevel':0,'regionLevel':0,'maxCells':100000,'snap':False,'addLayers':False,
+                'meshProfileRevision':'castellated-staircase-uniform-v3','geometryApproximation':'castellated-staircase'}
 
 
 def reject(code, action):
@@ -206,10 +206,10 @@ def profile_source_evidence(files,prefix,profile):
             for key in ('maxGlobalCells','maxLocalCells'):
                 expected,count=re.subn(r'(?m)^(\s*'+key+r'\s+)[^;]+;',lambda m:m[1]+'100000;',expected)
                 if count!=1: reject('CFD_EDUCATIONAL_SOURCE_PIN_MISMATCH','Retain exact bounded tutorial meshing overrides.')
-            expected=expected.replace('level (4 4);','level (2 2);').replace('levels ((0.0 3));','levels ((0.0 1));')
+            expected=expected.replace('level (4 4);','level (0 0);').replace('levels ((0.0 3));','levels ((0.0 0));')
             for key in ('snap','addLayers'):
                 expected,count=re.subn(r'(?m)^(\s*'+key+r'\s+)[^;]+;',lambda m:m[1]+'false;',expected)
-                if count!=1: reject('CFD_EDUCATIONAL_SOURCE_PIN_MISMATCH','Retain one explicit v2 snap=false/addLayers=false override without altering the official STL source.')
+                if count!=1: reject('CFD_EDUCATIONAL_SOURCE_PIN_MISMATCH','Retain one explicit uniform-v3 snap=false/addLayers=false override without altering the official STL source.')
         path=prefix+'/'+relative
         if path not in files or files[path].decode('utf-8').replace('\r\n','\n')!=expected:
             reject('CFD_EDUCATIONAL_PROFILE_SETTINGS_MISMATCH','Match pinned physics/mesh/numerical dictionaries with only the documented versioned smoke overrides; arbitrary altered source is a different study.')
@@ -222,7 +222,9 @@ def profile_source_evidence(files,prefix,profile):
             if path not in files or sha256(files[path]).hexdigest()!=item['sha256'] or len(files[path])!=item['bytes']:
                 reject('CFD_EDUCATIONAL_PROFILE_INITIAL_STATE_MISMATCH','Retain the exact supplied cavity initial fields copied before its first physical solver step.')
     return {'sourceCommit':PIN,'checkedSettings':checked,'geometryIsEducationalTutorial':True,
-            'meshOverride':dict(BULLET_MESH_V2) if profile=='cavitation-bullet-v1' else None,
+            'meshOverride':dict(BULLET_MESH_V3) if profile=='cavitation-bullet-v1' else None,
+            'geometryLimitations':['Unchanged 15×15×50 background, no local refinement; approximately five cells across the source 0.01 m bullet diameter.',
+                'Castellated staircase surface is a coarse educational geometry approximation; no quantitative cavitation/bullet/Pump accuracy acceptance.'] if profile=='cavitation-bullet-v1' else [],
             'mesherExecutionAuthenticityVerified':False,'quantitativeGeometryAccuracyValidated':False}
 
 
@@ -238,9 +240,9 @@ def validate_mesh_log(log,mesh):
 def validate_solver_profile(solver,profile):
     if not isinstance(solver,dict) or any(solver.get(k)!=v for k,v in {'distribution':'OpenFOAM-Foundation','version':'12','sourceCommit':PIN,'profile':profile}.items()):
         reject('CFD_EDUCATIONAL_SOLVER_METHOD_MISMATCH','Associate the worker report with the exact pinned educational solver/profile.')
-    expected=BULLET_MESH_V2 if profile=='cavitation-bullet-v1' else None
+    expected=BULLET_MESH_V3 if profile=='cavitation-bullet-v1' else None
     if solver.get('meshOverride')!=expected:
-        reject('CFD_EDUCATIONAL_MESH_PROFILE_MISMATCH','Declare the exact versioned educational mesh override; bullet-v2 requires castellated staircase, snap=false, addLayers=false, refinement2/1 and max100000 cells.')
+        reject('CFD_EDUCATIONAL_MESH_PROFILE_MISMATCH','Declare the exact versioned educational mesh override; bullet uniform-v3 requires castellated staircase, snap=false, addLayers=false, no local refinement0/0 and max100000 cells.')
 
 
 def validate_stages(stages,profile):
@@ -399,6 +401,8 @@ def verify_educational_run(raw, sidecar, metadata, *, sidecar_bytes=None):
         profile=job.get('caseProfile')
         if profile not in PROFILES or reference.get('sourceCommit')!=PIN or reference.get('caseProfile')!=profile or job.get('parameters')!={}:
             reject('CFD_EDUCATIONAL_PROFILE_MISMATCH','Use one unchanged approved fixed educational profile with the exact tutorial source commit.')
+        if job.get('inputRevision')!=('fixture-v3' if profile=='cavitation-bullet-v1' else 'fixture-v1'):
+            reject('CFD_EDUCATIONAL_INPUT_REVISION_MISMATCH','Match the exact versioned fixture input: cavity fixture-v1 or bullet uniform-mesh fixture-v3. Older mesh studies retain their historical failure state.')
         association=github_association(metadata,profile)
         result['githubAssociation']=association
         if inspected['solver']!={'adapter':'openfoam','distribution':'OpenFOAM-Foundation','version':'12'} or inspected['method']!={'id':profile,'rotationModel':'stationary','physicalModel':'single-phase-incompressible' if profile=='transient-cavity-v1' else 'liquid-vapour-cavitation'}:
@@ -419,6 +423,8 @@ def verify_educational_run(raw, sidecar, metadata, *, sidecar_bytes=None):
         mesh=mesh_evidence(files,prefix)
         if profile=='transient-cavity-v1' and mesh['cellCount']!=400:
             reject('CFD_EDUCATIONAL_MESH_PROFILE_MISMATCH','The unchanged 20×20×1 cavity must produce 400 native cells.')
+        if profile=='cavitation-bullet-v1' and mesh['cellCount']>15*15*50:
+            reject('CFD_EDUCATIONAL_MESH_PROFILE_MISMATCH','Without local refinement or layers, the accepted uniform bullet mesh cannot exceed its unchanged 15×15×50 background-cell budget.')
         log=files.get('output/logs/foamRun.log',b'').decode('utf-8',errors='replace')
         meshlog=files.get('output/logs/checkMesh.log',b'').decode('utf-8',errors='replace')
         validate_mesh_log(meshlog,mesh)
@@ -520,7 +526,8 @@ def markdown_report(result):
                       '- Restart yang tercatat hanya mesh tetap; kesetaraan terhadap uninterrupted run dan physical sliding rotor belum diverifikasi.']
         else:
             lines += ['- Bullet memakai model liquid–vapour SchnerrSauer. Durasi 10 µs adalah 0.002 kali karakteristik 0.005 s.',
-                      '- Revisi mesh castellated-staircase-v2 memakai snap=false dan addLayers=false, refinement 2/1, serta batas 100000 cells. STL resmi tetap sumber immutable, tetapi permukaan mesh merupakan pendekatan staircase.',
+                      '- Revisi mesh castellated-staircase-uniform-v3 memakai snap=false dan addLayers=false, refinement 0/0, serta batas 100000 cells. STL resmi tetap sumber immutable, tetapi permukaan mesh merupakan pendekatan staircase.',
+                      '- Background asli 15×15×50 dipertahankan, dengan sekitar lima cells melintasi diameter sumber bullet 0.01 m. Resolusi ini sangat kasar untuk prediksi kuantitatif cavitation.',
                       '- Pendekatan staircase dipakai untuk latihan alur meshing dan solver; akurasi geometri serta prediksi kuantitatif cavitation bullet atau Pump belum divalidasi.',
                       '- Fraksi uap dihitung dari 1−alpha.water tanpa clipping. Run dapat tetap valid sebagai smoke ketika fraksi uap belum berkembang.',
                       '- p_rgh merupakan hydrostatic-reduced pressure; penilaian vapor pressure membutuhkan rekonstruksi tekanan absolut/datum yang benar.']

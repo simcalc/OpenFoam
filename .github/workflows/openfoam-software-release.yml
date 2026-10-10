@@ -1,0 +1,45 @@
+name: OpenFOAM complete official software release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openfoam-software-release-openfoam12-20250206
+  cancel-in-progress: false
+
+jobs:
+  publish-official-software:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.repository.private == false && github.repository == 'simcalc/OpenFoam' && vars.PUBLIC_SOFTWARE_RELEASE_ENABLED == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            tools/cfd_worker
+            tests
+            docs
+            .github/workflows
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12.10'
+      - name: Verify fixed PUBLIC standard-runner scope
+        run: python -B tools/cfd_worker/public_runner_guard.py
+      - name: Software release contract regression
+        run: python -B -m unittest discover -s tests -p test_software_release.py -v
+      - name: Download original package and verify complete software/source inventory
+        run: python -B tools/cfd_worker/software_release.py prepare --output "$RUNNER_TEMP/openfoam-software-release"
+      - name: Publish verified draft assets and verify anonymous release downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -B tools/cfd_worker/public_runner_guard.py
+          python -B tools/cfd_worker/software_release.py publish --output "$RUNNER_TEMP/openfoam-software-release"

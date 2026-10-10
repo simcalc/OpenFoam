@@ -16,7 +16,7 @@ from untirta_cfd_worker.capabilities import capability_report
 class ReleaseBoundary(unittest.TestCase):
     def test_cli_uses_distinct_fixed_profile_revisions_without_solver(self):
         spec=importlib.util.spec_from_file_location('benchmark_cli_contract',ROOT/'tools/cfd_worker/run.py');cli=importlib.util.module_from_spec(spec);spec.loader.exec_module(cli)
-        for profile,revision in (('transient-cavity-v1','fixture-v1'),('cavitation-bullet-v1','fixture-v2')):
+        for profile,revision in (('transient-cavity-v1','fixture-v1'),('cavitation-bullet-v1','fixture-v3')):
             with patch.object(sys,'argv',['run.py','--benchmark',profile]),patch.object(cli,'execute_job',return_value={'actualCfdRun':False,'status':'ContractOnly'}) as execute,patch('sys.stdout',new=io.StringIO()):
                 self.assertEqual(cli.main(),2)
             source,reference=execute.call_args.args[:2]
@@ -67,7 +67,7 @@ class ReleaseBoundary(unittest.TestCase):
     def test_fixed_profiles_only(self):
         for profile in ('transient-cavity-v1','cavitation-bullet-v1'):
             ref={'schemaVersion':'untirta.cfd-benchmark-reference.v1','kind':'development-benchmark','caseProfile':profile,'sourceCommit':'0b487fc98b88d3e8dc3c3ead4662e7632dd5e7dd'}
-            source={'schemaVersion':'untirta.cfd-worker-job.v1','studyId':profile,'inputRevision':'fixture-v2' if profile=='cavitation-bullet-v1' else 'fixture-v1','adapter':'openfoam','caseProfile':profile,'referenceSha256':digest(ref),'limits':{},'parameters':{}}
+            source={'schemaVersion':'untirta.cfd-worker-job.v1','studyId':profile,'inputRevision':'fixture-v3' if profile=='cavitation-bullet-v1' else 'fixture-v1','adapter':'openfoam','caseProfile':profile,'referenceSha256':digest(ref),'limits':{},'parameters':{}}
             self.assertEqual(Job.parse(source,ref).profile,profile)
             source['parameters']={'rpm':2900}
             with self.assertRaises(WorkerDiagnostic): Job.parse(source,ref)
@@ -101,9 +101,26 @@ class ReleaseBoundary(unittest.TestCase):
         for path in (ROOT/'.github/workflows').glob('*.yml'):
             text=path.read_text()
             self.assertIn("github.event.repository.private == false",text)
-            self.assertIn("vars.PUBLIC_EDUCATIONAL_RUNS_ENABLED == 'true'",text)
+            flag='PUBLIC_SOFTWARE_RELEASE_ENABLED' if path.name=='openfoam-software-release.yml' else 'PUBLIC_EDUCATIONAL_RUNS_ENABLED'
+            self.assertIn("vars."+flag+" == 'true'",text)
+            self.assertIn("github.repository == 'simcalc/OpenFoam'",text)
             self.assertIn('runs-on: ubuntu-24.04',text)
             self.assertIn('workflow_dispatch:',text)
             self.assertNotIn('pull_request:',text);self.assertNotIn('push:',text)
             self.assertNotIn('secrets.',text);self.assertNotIn('CFD_FREE_ALLOWANCE_ATTESTATION',text)
+    def test_software_release_is_fixed_public_distribution_separate_from_cfd_outputs(self):
+        path=ROOT/'.github/workflows/openfoam-software-release.yml'
+        text=path.read_text()
+        self.assertIn('openfoam12-20250206',text)
+        self.assertIn('tools/cfd_worker/software_release.py',text)
+        self.assertIn('tools/cfd_worker/public_runner_guard.py',text)
+        self.assertIn('${{ github.token }}',text)
+        self.assertIn('contents: write',text)
+        self.assertNotIn('run.py --benchmark',text)
+        self.assertNotIn('actions/upload-artifact',text)
+        self.assertNotIn('install_openfoam12.sh',text)
+        self.assertFalse((ROOT/'openfoam12_20250206_amd64.deb').exists())
+        readme=(ROOT/'README.md').read_text()
+        self.assertIn('112,877,506',readme)
+        self.assertIn('source-preparation document does not claim',readme)
 if __name__=='__main__': unittest.main()

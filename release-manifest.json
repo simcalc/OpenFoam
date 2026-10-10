@@ -2,14 +2,14 @@
   "schemaVersion": "untirta.educational-public-release.v1",
   "repository": "simcalc/OpenFoam",
   "canonicalSource": "private system repository; no live mirror or private history publication",
-  "scope": "fixed OpenFOAM educational benchmarks only",
+  "scope": "fixed OpenFOAM educational benchmarks and pinned official software distribution only",
   "publicationState": "export-prepared",
   "actualLocalCfdRun": false,
   "officialTutorialFiles": 29,
   "licenseAndProvenanceFiles": 2,
   "officialFixtureFiles": 31,
   "exporterSourcePath": "tools/cfd_worker/export_public.py",
-  "exporterSourceSha256": "9cc326898334a4cff53e619329f4c76569f5d16557db78fac55dbd46735f4db6",
+  "exporterSourceSha256": "b83927521b400f38e23b9f9ae4cbd502867c2117c6161c896438cac073b5a901",
   "excluded": [
     "Main application",
     "Lab API",
@@ -31,6 +31,14 @@
       "canonicalSourceSha256": "e2f5c4ce91495be770fa4c0c9c3ae258d0b2534fb6f27e90e81f575f7c250a4a"
     },
     {
+      "path": ".github/workflows/openfoam-software-release.yml",
+      "sha256": "238d3b4a4751bde9c8122f4c37b2cf075745c37f79c5cb08e824d3ee90a508ad",
+      "bytes": 1733,
+      "projection": "same fixed PUBLIC-only software release workflow; no private checkout/history/token",
+      "canonicalSourcePath": ".github/workflows/openfoam-software-release.yml",
+      "canonicalSourceSha256": "238d3b4a4751bde9c8122f4c37b2cf075745c37f79c5cb08e824d3ee90a508ad"
+    },
+    {
       "path": ".github/workflows/transient-cfd-validation.yml",
       "sha256": "61ad4f8868bf6077465df6c002711bb76fa8854121fd5014c95f9a806a958ef8",
       "bytes": 5223,
@@ -48,11 +56,19 @@
     },
     {
       "path": "README.md",
-      "sha256": "ce745018e9e58493741b8e18b18397cbbf6f990c64d2797542c696346e0a364e",
-      "bytes": 5590,
+      "sha256": "f3e38c73e06baa1addaa91b414f721f72bab7f39271f54e87a2830ebb6c5e2d3",
+      "bytes": 8610,
       "projection": "canonical small public release template",
       "canonicalSourcePath": "deployment/cfd-public/README.md",
-      "canonicalSourceSha256": "b9ed3071a5a9ddad202623b5ea99b9b786e28506f6545549fd6a595caa775a50"
+      "canonicalSourceSha256": "8b47db55f691f1dc5c85fc21f98e9ce59157774ed3e14a043de35aee3ccbe675"
+    },
+    {
+      "path": "docs/software-release-INSTALL.md",
+      "sha256": "0d48709d3496cacd5223541392b713e9b5c595e65cc4a9a2ec5882009930a778",
+      "bytes": 3075,
+      "projection": "canonical small public release template",
+      "canonicalSourcePath": "deployment/cfd-public/software-release-INSTALL.md",
+      "canonicalSourceSha256": "0d48709d3496cacd5223541392b713e9b5c595e65cc4a9a2ec5882009930a778"
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/__init__.py",
@@ -96,11 +112,11 @@
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/openfoam.py",
-      "sha256": "389a2f4837b449640ca92106e6380225d48855b2cc1c295464e0152c475cda69",
-      "bytes": 20068,
+      "sha256": "4c189a009d18f1d3758935cac2b75ce5300949f45b6936b3c9839bf14760ff74",
+      "bytes": 20239,
       "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
       "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/openfoam.py",
-      "canonicalSourceSha256": "675b8f00cb57dbf1dcd76ef6e4c32a040f7404ff137a5ba60a9acfd80e326687"
+      "canonicalSourceSha256": "35fb11567f5a5010030c00f56913a1d135bd818485955cfb1ca2145a9e494ce5"
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/process_gate.py",
@@ -128,11 +144,19 @@
     },
     {
       "path": "tests/test_release_boundary.py",
-      "sha256": "47c7341f0764cd59266254c8ce69a8dcb4489cf9f877cab97e32fd0b527865e6",
-      "bytes": 10354,
+      "sha256": "0ea5e0de0266f3daf9ebda38b845d06d38f50c97baefcab79c8ec31b897c956d",
+      "bytes": 11417,
       "projection": "canonical small public release template",
       "canonicalSourcePath": "deployment/cfd-public/test_release_boundary.py",
-      "canonicalSourceSha256": "3a34385fdd1614d442d690eddcb827d15b7ff705a49701d2a1ba8f41d6b251e6"
+      "canonicalSourceSha256": "e5a7437c580604afc1c11fcf3db343f91971ef9de71e2b4917fa89dc4f48b2b8"
+    },
+    {
+      "path": "tests/test_software_release.py",
+      "sha256": "9dc8bbe6fe7671e81caa7ae4fbd2a1e0949d347b9e67ba78c44b8c5535dfd0ad",
+      "bytes": 7968,
+      "projection": "same offline software release contracts; no live publication claim",
+      "canonicalSourcePath": "tests/cfd_worker/test_software_release.py",
+      "canonicalSourceSha256": "9dc8bbe6fe7671e81caa7ae4fbd2a1e0949d347b9e67ba78c44b8c5535dfd0ad"
     },
     {
       "path": "tools/cfd_worker/fixtures/openfoam12/COPYING",
@@ -416,19 +440,27 @@
     },
     {
       "path": "tools/cfd_worker/run.py",
-      "sha256": "a981c071745d1b205ced4dea3c705bcadc3b480307558cdf096362b113e2f16f",
+      "sha256": "f34025dff8c577714b80afd864e118ee309de99de93fb953f306322e2d5106a0",
       "bytes": 2675,
       "projection": "fixed educational CLI; private file ingress removed",
       "canonicalSourcePath": "tools/cfd_worker/run.py",
-      "canonicalSourceSha256": "7ba9f8552702da06f32a9cf4087f1d607e22d409db5b536821566dee4afff4eb"
+      "canonicalSourceSha256": "7d4ab07c04e8b178531c6a3e3024fd9920e58375f150fa80c8c2e37d718754de"
+    },
+    {
+      "path": "tools/cfd_worker/software_release.py",
+      "sha256": "c006fadc90dfd82a7d551d366fcb4ebffe71a985e1556b4946288c82661a53e8",
+      "bytes": 20224,
+      "projection": "same fixed official software package verification/inventory tool; no application data",
+      "canonicalSourcePath": "tools/cfd_worker/software_release.py",
+      "canonicalSourceSha256": "c006fadc90dfd82a7d551d366fcb4ebffe71a985e1556b4946288c82661a53e8"
     },
     {
       "path": "tools/cfd_worker/verify_educational_run.py",
-      "sha256": "6733c65718900d1b6d1ed525397e23c562b1a9d4a31e2e270fa5ed3b007c38de",
-      "bytes": 49840,
+      "sha256": "e66d1a4f26548e535e7d38e7976aa72612e7e1fbba15b0689ad6c0c3791c9d9d",
+      "bytes": 51033,
       "projection": "same bounded educational output tool",
       "canonicalSourcePath": "tools/cfd_worker/verify_educational_run.py",
-      "canonicalSourceSha256": "6733c65718900d1b6d1ed525397e23c562b1a9d4a31e2e270fa5ed3b007c38de"
+      "canonicalSourceSha256": "e66d1a4f26548e535e7d38e7976aa72612e7e1fbba15b0689ad6c0c3791c9d9d"
     }
   ]
 }
