@@ -27,6 +27,7 @@ sys.path.insert(0, str(ROOT/'services/cfd_worker/src'))
 from untirta_cfd_worker.artifacts import ArtifactLimits, inspect_artifact, _workspace, _regular_source
 from untirta_cfd_worker.checkpoint import strict_json
 from untirta_cfd_worker.contracts import WorkerDiagnostic
+from untirta_cfd_worker.openfoam import field_dimensions
 
 PIN = '0b487fc98b88d3e8dc3c3ead4662e7632dd5e7dd'
 PROFILES = {
@@ -148,9 +149,8 @@ def mesh_evidence(files, prefix):
 
 def field_evidence(raw, *, cells, components, dimensions):
     body=foam_body(raw)
-    unit=re.search(r'dimensions\s*\[([^\]]+)\]\s*;',body)
-    if not unit or ' '.join(unit[1].split())!=dimensions:
-        reject('CFD_EDUCATIONAL_FIELD_UNIT_MISMATCH','Keep native field dimensions explicit; kinematic p, absolute pressure and p_rgh are distinct quantities.')
+    if field_dimensions(body)!=dimensions:
+        reject('CFD_EDUCATIONAL_FIELD_UNIT_MISMATCH','Keep one explicit native dimension set; [] means dimensionless only, while kinematic p, absolute pressure and p_rgh remain distinct quantities.')
     match=re.search(r'internalField\s+(?:nonuniform\s+List<(scalar|vector)>\s+(\d+)\s*\((.*?)\)\s*;|uniform\s+([^;]+);)',body,re.S)
     if not match: reject('CFD_EDUCATIONAL_FIELD_FORMAT_INVALID','Expected an explicit native uniform or nonuniform internal field.')
     values=[float(v) for v in re.findall(NUM,match[3] or match[4])]

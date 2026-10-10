@@ -14,6 +14,18 @@ sys.path.insert(0,str(ROOT/'services/cfd_worker/src'))
 from untirta_cfd_worker.contracts import Job,WorkerDiagnostic,digest
 from untirta_cfd_worker.capabilities import capability_report
 class ReleaseBoundary(unittest.TestCase):
+    def test_native_dimensionless_writer_format_keeps_pressure_units_distinct(self):
+        from untirta_cfd_worker.openfoam import field_dimensions
+        original=ROOT/'tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/0/alpha.water'
+        self.assertEqual(field_dimensions(original.read_text()), '0 0 0 0 0 0 0')
+        for token in ('', ' ', '0 0 0 0 0 0 0'):
+            self.assertEqual(field_dimensions('dimensions ['+token+'];\ninternalField uniform 1;'), '0 0 0 0 0 0 0')
+        self.assertEqual(field_dimensions('dimensions [1 -1 -2 0 0 0 0];'), '1 -1 -2 0 0 0 0')
+        self.assertNotEqual(field_dimensions('dimensions [];'), '1 -1 -2 0 0 0 0')
+        self.assertNotEqual(field_dimensions('dimensions [0 2 -2 0 0 0 0];'), '1 -1 -2 0 0 0 0')
+        for text in ('internalField uniform 1;', 'dimensions [pressure];', 'dimensions [NaN 0 0 0 0 0 0];',
+                     'dimensions [1 -1 -2 0 0 0];', 'dimensions [1 -1 -2 0 0 0 0];\ndimensions [];'):
+            self.assertIsNone(field_dimensions(text), text)
     def test_cli_uses_distinct_fixed_profile_revisions_without_solver(self):
         spec=importlib.util.spec_from_file_location('benchmark_cli_contract',ROOT/'tools/cfd_worker/run.py');cli=importlib.util.module_from_spec(spec);spec.loader.exec_module(cli)
         for profile,revision in (('transient-cavity-v1','fixture-v1'),('cavitation-bullet-v1','fixture-v3')):

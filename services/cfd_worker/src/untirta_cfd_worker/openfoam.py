@@ -166,6 +166,26 @@ def prepare(job: Job, workspace: Path, fixture_root: Path) -> tuple[Path, list[l
     metadata = {'distribution': 'OpenFOAM-Foundation', 'version': '12', 'sourceCommit': provenance['commit'], 'profile': job.profile, 'physicalModel': physical_label, 'benchmarkOverrides': changes, 'meshOverride': {'surfaceLevel': 0, 'regionLevel': 0, 'maxCells': 100000, 'snap': False, 'addLayers': False, 'meshProfileRevision': 'castellated-staircase-uniform-v3', 'geometryApproximation': 'castellated-staircase'} if job.profile == 'cavitation-bullet-v1' else None, 'meshLimitations': ['Castellated staircase cells approximate the immutable STL boundary; no exact smooth surface geometry claim.', 'Unchanged native 15 x 15 x 50 background, no local refinement: approximately five cells across the source 0.01 m bullet diameter.', 'No snapping or boundary layers; coarse development mesh is not mesh-independent or suitable for quantitative geometry, cavitation-model or Pump acceptance claims.'] if job.profile == 'cavitation-bullet-v1' else [], 'quantityClaim': 'development-only; no Pump performance, NPSHR, NPSH3 or engineering acceptance claim'}
     return (case, stages, metadata)
 
+def field_dimensions(text: str) -> str | None:
+    """Decode one explicit native dimension set without changing field values.
+
+    Foundation 12 dimensionSetIO.C writes the dimensionless set as []; the
+    other reviewed field quantities retain seven SI base exponents. Empty
+    brackets mean zero exponents, never missing or inferred pressure units.
+    """
+    body = re.sub('/\\*.*?\\*/|//[^\\n]*', '', text, flags=re.DOTALL)
+    declarations = re.findall('(?m)^\\s*dimensions\\s+\\[([^\\[\\];\\r\\n]*)\\]\\s*;', body)
+    if len(declarations) != 1 or len(re.findall('\\bdimensions\\b', body)) != 1:
+        return None
+    value = ' '.join(declarations[0].split())
+    if len(value) > 128:
+        return None
+    if not value:
+        return '0 0 0 0 0 0 0'
+    if not re.fullmatch('[+-]?\\d+(?:\\s+[+-]?\\d+){6}', value):
+        return None
+    return ' '.join((str(int(exponent)) for exponent in value.split()))
+
 def field_values(path: Path) -> list[float]:
     """Read finite ASCII internal field numbers, excluding header/dimensions."""
     text = path.read_text(encoding='utf-8')
@@ -203,9 +223,8 @@ def collect(job: Job, workspace: Path, case: Path, *, log_name='foamRun.log', ta
             if not path.is_file():
                 raise WorkerDiagnostic('CFD_CHECKPOINT_INCOMPLETE', 'A physical-time checkpoint is missing required paired native fields.')
             values = field_values(path)
-            dimension_match = re.search('dimensions\\s+\\[([^\\]]+)\\]', path.read_text())
-            if not dimension_match or ' '.join(dimension_match[1].split()) != dimensions[name]:
-                raise WorkerDiagnostic('CFD_FIELD_UNIT_MISMATCH', 'Native field dimensions do not match the selected solver quantity.')
+            if field_dimensions(path.read_text()) != dimensions[name]:
+                raise WorkerDiagnostic('CFD_FIELD_UNIT_MISMATCH', 'Native ' + name + ' dimensions must match the selected solver quantity; pressure and kinematic pressure are distinct, and [] is dimensionless only.')
             if name == 'alpha.water' and (min(values) < -1e-06 or max(values) > 1 + 1e-06):
                 raise WorkerDiagnostic('CFD_PHASE_FRACTION_OUTSIDE_DOMAIN', 'Liquid fraction must remain inside [0,1] within the declared tolerance.')
             files.append({'path': path.relative_to(workspace).as_posix(), 'sha256': file_digest(path), 'bytes': path.stat().st_size})

@@ -56,11 +56,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "f3e38c73e06baa1addaa91b414f721f72bab7f39271f54e87a2830ebb6c5e2d3",
-      "bytes": 8610,
+      "sha256": "6f843935d03cc287fef987172f8cc313d268da06f910d6333bce473147d63c0b",
+      "bytes": 10086,
       "projection": "canonical small public release template",
       "canonicalSourcePath": "deployment/cfd-public/README.md",
-      "canonicalSourceSha256": "8b47db55f691f1dc5c85fc21f98e9ce59157774ed3e14a043de35aee3ccbe675"
+      "canonicalSourceSha256": "b770ec666fd6d3c42c1ab66ce3cd28526830fdea589c180271f7565d7d285e06"
     },
     {
       "path": "docs/software-release-INSTALL.md",
@@ -112,11 +112,11 @@
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/openfoam.py",
-      "sha256": "4c189a009d18f1d3758935cac2b75ce5300949f45b6936b3c9839bf14760ff74",
-      "bytes": 20239,
+      "sha256": "4aad5979798ae75badce2e4ccab2c7f6b854a1e8fdee467913b195261722e38c",
+      "bytes": 21126,
       "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
       "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/openfoam.py",
-      "canonicalSourceSha256": "35fb11567f5a5010030c00f56913a1d135bd818485955cfb1ca2145a9e494ce5"
+      "canonicalSourceSha256": "ce4653155ddceee1750a71d74cb56baf238b6b212b35733d3b0b622a0c7a9371"
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/process_gate.py",
@@ -144,11 +144,11 @@
     },
     {
       "path": "tests/test_release_boundary.py",
-      "sha256": "0ea5e0de0266f3daf9ebda38b845d06d38f50c97baefcab79c8ec31b897c956d",
-      "bytes": 11417,
+      "sha256": "2dc75d993ba952e31fb4608b06d7b2ff0c83a75ac3101ba66382fe8b82629bce",
+      "bytes": 12456,
       "projection": "canonical small public release template",
       "canonicalSourcePath": "deployment/cfd-public/test_release_boundary.py",
-      "canonicalSourceSha256": "e5a7437c580604afc1c11fcf3db343f91971ef9de71e2b4917fa89dc4f48b2b8"
+      "canonicalSourceSha256": "5b98901f7f815c4231bcc3da0bbda4b6d5309d03dabad538033b03e949f669f8"
     },
     {
       "path": "tests/test_software_release.py",
@@ -456,11 +456,11 @@
     },
     {
       "path": "tools/cfd_worker/verify_educational_run.py",
-      "sha256": "e66d1a4f26548e535e7d38e7976aa72612e7e1fbba15b0689ad6c0c3791c9d9d",
-      "bytes": 51033,
+      "sha256": "856326cb1564b6344b06d23ae9c7f8e9a1c7811430fd85413b7a29728bfcd96f",
+      "bytes": 51056,
       "projection": "same bounded educational output tool",
       "canonicalSourcePath": "tools/cfd_worker/verify_educational_run.py",
-      "canonicalSourceSha256": "e66d1a4f26548e535e7d38e7976aa72612e7e1fbba15b0689ad6c0c3791c9d9d"
+      "canonicalSourceSha256": "856326cb1564b6344b06d23ae9c7f8e9a1c7811430fd85413b7a29728bfcd96f"
     }
   ]
 }

@@ -2,6 +2,8 @@
 
 Two bounded educational OpenFOAM Foundation 12 examples: stationary transient cavity and cavitating bullet. This repository is an exported educational runner. The complete application, Lab APIs, Pump planner, databases, student inputs and snapshots remain in the private canonical system repository. There are no private-repository checkout credentials, no application API, no cloud database connection, no PyFluent SDK or license route here.
 
+The full official Ubuntu software package and its corresponding source are now available in [Release `openfoam12-20250206`](https://github.com/simcalc/OpenFoam/releases/tag/openfoam12-20250206). Use the Release downloads for the software; **Code -> Download ZIP** contains the educational runner source.
+
 ## Run scope
 
 The two CFD workflows run only by manual `workflow_dispatch` in `simcalc/OpenFoam`, while PUBLIC and `PUBLIC_EDUCATIONAL_RUNS_ENABLED=true`. The separate software-release workflow requires `PUBLIC_SOFTWARE_RELEASE_ENABLED=true` and never executes a CFD solve. All three workflows use the standard `ubuntu-24.04` label, never larger/self-hosted runners. GitHub standard public Actions compute is free: https://docs.github.com/en/billing/concepts/product-billing/github-actions . Simulation artifact storage is separate and bounded to ZIP + manifest <=25 MiB, retention seven days. No unlimited storage or billing-balance claim is made. No caches or custom runner images are created.
@@ -30,11 +32,21 @@ Native export includes exact initial state, mesh, settings, paired finite time f
 
 Python educational verification reports equations in Input -> Substitution -> Result stages from native operands. This repository does not perform application engineering calculations or alter Main.
 
+## Latest verified execution status
+
+| Route | Actual workflow | Result and limit |
+| --- | --- | --- |
+| Complete software Release | [38043948163](https://github.com/simcalc/OpenFoam/actions/runs/38043948163), source commit `61f9067` | SUCCESS; all nine custom assets published, with anonymous download bytes and checksums verified. No installation or solver execution occurs in this workflow. |
+| Transient cavity | [38043951905](https://github.com/simcalc/OpenFoam/actions/runs/38043951905) | SUCCESS for the bounded educational workflow. This does not establish real-pump or NPSHr acceptance. |
+| Cavitation bullet | [38043949962](https://github.com/simcalc/OpenFoam/actions/runs/38043949962) | Strict mesh checks passed for 11,089 cells. Field-unit collection failed and is under investigation; the complete CFD result is not accepted. |
+
+The software is available independently of the remaining cavitation diagnostic. Overall CFD acceptance is not CLEAN, and neither benchmark establishes NPSHr/NPSH3.
+
 ## Source and licensing
 
 The 29 official tutorial files are unchanged and pinned in `tools/cfd_worker/fixtures/openfoam12/provenance.json` at OpenFOAM-12 source commit `0b487fc98b88d3e8dc3c3ead4662e7632dd5e7dd`. Retained COPYING and project-authored provenance.json make 31 trace resources. Their GPL-3.0-or-later notice and COPYING are retained. See https://github.com/OpenFOAM/OpenFOAM-12 and https://openfoam.org/licence/ . Orchestration source is a reviewed subset/projection of the private canonical system; release-manifest.json records relative source/export hashes without publishing private Git history or runtime data. The export is not a live mirror. Project-authored orchestration licensing is not silently reassigned by this export.
 
-This export records preparation state, not live publication or solver acceptance. Actual local OpenFOAM acceptance is not claimed. Verify successful public workflow/native output evidence separately, retaining the exact source commit and run IDs with results.
+The export manifest records source preparation and integrity; live Release availability is established by the separate successful software-release workflow above. Actual local OpenFOAM acceptance is not claimed. Keep the exact source commit, run IDs and native output evidence with each result.
 
 ## Measured disposable Ubuntu 24.04 installation footprint
 
@@ -42,10 +54,21 @@ A real preceding private development-run installer downloaded the exact checksum
 
 ## Software package and source ZIP are different downloads
 
-GitHub **Code -> Download ZIP** contains the educational Python runner, original tutorial inputs, tests and documentation: about 1 MB extracted, not the installed OpenFOAM software. The full official Ubuntu 24.04 x86-64 software package is `openfoam12_20250206_amd64.deb`, exactly **112,877,506 bytes**, with SHA-256 `b3dcd9a636a5a827bf43ffcf0156922ba6db492123f035eae1046ee759602dd1`.
+GitHub **Code -> Download ZIP** contains the educational Python runner, original tutorial inputs, tests and documentation: about 1 MB extracted, not the installed OpenFOAM software. The verified [Release `openfoam12-20250206`](https://github.com/simcalc/OpenFoam/releases/tag/openfoam12-20250206) provides these direct downloads:
 
-The planned Release tag is [`openfoam12-20250206`](https://github.com/simcalc/OpenFoam/releases/tag/openfoam12-20250206), with the full `.deb`, checksum, package inventory, upstream source/license references and Ubuntu installation instructions as separate assets. The fixed manual software-release workflow first verifies the downloaded bytes and package identity. Release publication and subsequent remote-asset verification are separate evidence; this source-preparation document does not claim that the tag or assets are already available. Inspect the [Releases page](https://github.com/simcalc/OpenFoam/releases) and successful release-workflow evidence before treating the planned link as a verified download.
+| Download | Verified bytes | Contents |
+| --- | ---: | --- |
+| [Complete official `.deb`](https://github.com/simcalc/OpenFoam/releases/download/openfoam12-20250206/openfoam12_20250206_amd64.deb) | 112,877,506 | OpenFOAM Foundation 12, version 20250206, for Ubuntu 24.04 amd64; unchanged official package. |
+| [Corresponding source archive](https://github.com/simcalc/OpenFoam/releases/download/openfoam12-20250206/openfoam12_20250206-corresponding-source.tar.gz) | 71,228,570 | Exact source/build/documentation tree from that verified package, with generated platform binaries excluded. |
 
-The fixed asset set is the `.deb`, `openfoam12_20250206-corresponding-source.tar.gz`, `COPYING`, `INSTALL.md`, `INVENTORY.json`, `INVENTORY.md`, `RELEASE.json`, `SHA256SUMS` and `RELEASE-NOTES.md`. The inventory records every member of the OpenFOAM tree extracted from the checksum-verified `.deb`, with package identity/control metadata recorded separately; the corresponding-source archive retains the source/build/documentation areas and excludes generated platform binaries. Missing required source or license areas prevent publication. Read the [prepared Ubuntu instructions](docs/software-release-INSTALL.md) for the package/dependency distinction. The workflow does not install this package or start a solver.
+The official `.deb` SHA-256 is:
+
+```text
+b3dcd9a636a5a827bf43ffcf0156922ba6db492123f035eae1046ee759602dd1
+```
+
+The fixed manual workflow verified the original package bytes and identity, then verified the published assets through anonymous downloads. See [SHA256SUMS](https://github.com/simcalc/OpenFoam/releases/download/openfoam12-20250206/SHA256SUMS) for the complete asset checksums.
+
+The nine custom assets are the `.deb`, `openfoam12_20250206-corresponding-source.tar.gz`, `COPYING`, `INSTALL.md`, `INVENTORY.json`, `INVENTORY.md`, `RELEASE.json`, `SHA256SUMS` and `RELEASE-NOTES.md`. The inventory records every member of the OpenFOAM tree extracted from the checksum-verified `.deb`, with package identity/control metadata recorded separately. Read the [Ubuntu installation instructions](docs/software-release-INSTALL.md) for package verification and dependencies. This source-preparation document does not claim successful cavitation field acceptance or NPSHr/NPSH3 merely because the software assets are available.
 
 The `.deb` contains OpenFOAM software; it is not a Windows installer and does not include every Ubuntu dependency. This pilot installs it only on the disposable GitHub Ubuntu VM, where measured total archives were 181 MB including 68.5 MB dependencies, and additional installed software occupied 852 MB. No laptop installation is performed. The software Release asset is separate from bounded 25 MiB simulation-result artifacts. The private `npsh` repository remains the canonical source of the full application and export logic; this public repository exposes only the reviewed educational package and official software distribution asset.
