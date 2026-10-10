@@ -40,6 +40,9 @@ PROFILES = {
 NUM = r'[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?'
 BULLET_MESH_V3={'surfaceLevel':0,'regionLevel':0,'maxCells':100000,'snap':False,'addLayers':False,
                 'meshProfileRevision':'castellated-staircase-uniform-v3','geometryApproximation':'castellated-staircase'}
+BULLET_INITIAL_ARCHIVE_MAPPING={
+    'native-case/0/Phi':'native-initial-state/potential-initializer/Phi',
+    'native-case/0/phi':'native-initial-state/0/phi'}
 
 
 def reject(code, action):
@@ -245,6 +248,39 @@ def validate_solver_profile(solver,profile):
         reject('CFD_EDUCATIONAL_MESH_PROFILE_MISMATCH','Declare the exact versioned educational mesh override; bullet uniform-v3 requires castellated staircase, snap=false, addLayers=false, no local refinement0/0 and max100000 cells.')
 
 
+def initial_state_archive_evidence(files,solver,profile):
+    """Verify archive-only placement of potential Phi and physical flux phi.
+
+    Foundation potentialFoam reads the original Phi and writes lowercase phi.
+    Their snapshot destinations must be distinct on case-insensitive systems.
+    This checks preserved source bytes and declared mapping; the archive does
+    not independently expose the original live case's time-zero filenames.
+    """
+    mapping=solver.get('initialStateArchiveMapping',{})
+    expected=BULLET_INITIAL_ARCHIVE_MAPPING if profile=='cavitation-bullet-v1' else {}
+    if mapping!=expected:
+        reject('CFD_EDUCATIONAL_INITIAL_ARCHIVE_MAPPING_MISMATCH','Retain the exact archive-only mapping of original potential Phi and physical flux phi; do not rename native solver fields or relax case-collision checks.')
+    evidence={'archiveMapping':dict(mapping),'archiveMappingMatched':True,
+              'mappingScope':'Independent initial-state archive only; native case paths remain declared original.',
+              'nativeCasePathPreservationIndependentlyVerified':False}
+    if profile!='cavitation-bullet-v1': return evidence
+    auxiliary='output/native-initial-state/potential-initializer/Phi'
+    flux='output/native-initial-state/0/phi'
+    source_path=profile+'/0/Phi'
+    original=(ROOT/'tools/cfd_worker/fixtures/openfoam12'/source_path).read_bytes()
+    provenance=strict_json((ROOT/'tools/cfd_worker/fixtures/openfoam12/provenance.json').read_bytes())
+    entry=next(item for item in provenance['files'] if item['path']==source_path)
+    if sha256(original).hexdigest()!=entry['sha256'] or len(original)!=entry['bytes']:
+        reject('CFD_EDUCATIONAL_SOURCE_PIN_MISMATCH','Restore the immutable pinned potential initializer before interpreting its archived snapshot.')
+    if files.get(auxiliary)!=original or flux not in files or 'output/native-initial-state/0/Phi' in files:
+        reject('CFD_EDUCATIONAL_INITIAL_ARCHIVE_MAPPING_MISMATCH','Preserve exact original Phi bytes in the separate potential-initializer folder, retain physical phi at time zero, and remove ambiguous snapshot aliases.')
+    if field_dimensions(foam_body(files[flux]))!='0 3 -1 0 0 0 0':
+        reject('CFD_EDUCATIONAL_FIELD_UNIT_MISMATCH','The initial physical phi is volumetric flux in m3/s; it must not be replaced by the uppercase velocity potential Phi.')
+    evidence.update(potentialInitializerSourceBytesMatched=True,physicalFluxSnapshotPresent=True,
+                    potentialInitializerSha256=sha256(original).hexdigest(),physicalFluxSnapshotSha256=sha256(files[flux]).hexdigest())
+    return evidence
+
+
 def validate_stages(stages,profile):
     required=['blockMesh','snappyHexMesh','checkMesh','potentialFoam','foamRun'] if profile=='cavitation-bullet-v1' else ['blockMesh','checkMesh','foamRun']
     if not isinstance(stages,list): reject('CFD_EDUCATIONAL_STAGE_EVIDENCE_REQUIRED','Include bounded actual mesher/mesh-check/initialization/solver stage evidence.')
@@ -420,6 +456,7 @@ def verify_educational_run(raw, sidecar, metadata, *, sidecar_bytes=None):
         validate_stages(stages,profile)
         prefix='output/native-case'
         source_settings=profile_source_evidence(files,prefix,profile)
+        initial_archive=initial_state_archive_evidence(files,solver,profile)
         mesh=mesh_evidence(files,prefix)
         if profile=='transient-cavity-v1' and mesh['cellCount']!=400:
             reject('CFD_EDUCATIONAL_MESH_PROFILE_MISMATCH','The unchanged 20×20×1 cavity must produce 400 native cells.')
@@ -489,7 +526,7 @@ def verify_educational_run(raw, sidecar, metadata, *, sidecar_bytes=None):
         result.update(valid=True,status='EducationalRunEvidenceMatched',reasonCode='CFD_EDUCATIONAL_RUN_EVIDENCE_MATCHED',
             profile=profile,binding=inspected['binding'],artifactSha256=inspected['artifactSha256'],archiveBytes=len(raw),
             sidecarBytes=len(sidecar_bytes),combinedUploadBytes=len(raw)+len(sidecar_bytes),
-            sourceSettings=source_settings,mesh=mesh,initialFields=initial_fields,fields=fields,physicalEndTimeSeconds=times[-1],physicalStepCount=len(times),
+            sourceSettings=source_settings,initialStateArchive=initial_archive,mesh=mesh,initialFields=initial_fields,fields=fields,physicalEndTimeSeconds=times[-1],physicalStepCount=len(times),
             sourceAndNativeIntegrityVerified=True,runEvidenceAssociationMatched=True,nativeNumericalSmokeChecksPassed=True,
             temporalConvergenceVerified=False,meshIndependenceVerified=False,conservationAcceptanceVerified=False,
             claim='Associated successful GitHub run/native numerical-smoke evidence only; offline authenticity and engineering acceptance remain separate.')
@@ -530,6 +567,7 @@ def markdown_report(result):
                       '- Background asli 15×15×50 dipertahankan, dengan sekitar lima cells melintasi diameter sumber bullet 0.01 m. Resolusi ini sangat kasar untuk prediksi kuantitatif cavitation.',
                       '- Pendekatan staircase dipakai untuk latihan alur meshing dan solver; akurasi geometri serta prediksi kuantitatif cavitation bullet atau Pump belum divalidasi.',
                       '- Fraksi uap dihitung dari 1−alpha.water tanpa clipping. Run dapat tetap valid sebagai smoke ketika fraksi uap belum berkembang.',
+                      '- Snapshot Phi dari initializer potential disimpan terpisah dari phi physical flux agar nama tetap tidak ambigu di Windows. Byte Phi dibandingkan dengan sumber immutable; archive tidak memverifikasi ulang nama pada live native case.',
                       '- p_rgh merupakan hydrostatic-reduced pressure; penilaian vapor pressure membutuhkan rekonstruksi tekanan absolut/datum yang benar.']
     else:
         lines += ['## Tindakan yang diperlukan','']+[f"- `{d['reasonCode']}`: {d['correctiveAction']}" for d in result['diagnostics']]

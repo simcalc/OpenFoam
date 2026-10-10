@@ -26,6 +26,33 @@ class ReleaseBoundary(unittest.TestCase):
         for text in ('internalField uniform 1;', 'dimensions [pressure];', 'dimensions [NaN 0 0 0 0 0 0];',
                      'dimensions [1 -1 -2 0 0 0];', 'dimensions [1 -1 -2 0 0 0 0];\ndimensions [];'):
             self.assertIsNone(field_dimensions(text), text)
+    def test_cavitation_initial_snapshot_preserves_potential_auxiliary_and_flux(self):
+        from untirta_cfd_worker.openfoam import prepare,save_initial_state
+        from untirta_cfd_worker.checkpoint import file_descriptors
+        from untirta_cfd_worker.contracts import file_digest
+        profile='cavitation-bullet-v1'
+        reference={'schemaVersion':'untirta.cfd-benchmark-reference.v1','kind':'development-benchmark','caseProfile':profile,'sourceCommit':'0b487fc98b88d3e8dc3c3ead4662e7632dd5e7dd'}
+        source={'schemaVersion':'untirta.cfd-worker-job.v1','studyId':profile,'inputRevision':'fixture-v3','adapter':'openfoam','caseProfile':profile,'referenceSha256':digest(reference),'limits':{},'parameters':{}}
+        job=Job.parse(source,reference)
+        with tempfile.TemporaryDirectory() as directory:
+            workspace=Path(directory)
+            case,_,metadata=prepare(job,workspace,ROOT/'tools/cfd_worker/fixtures/openfoam12')
+            original=(case/'0/Phi').read_bytes()
+            # Linux allows both native names. This is inert transport evidence,
+            # not a fabricated potentialFoam or physical solver run.
+            if sys.platform=='linux': (case/'0/phi').write_bytes(b'contract-only-volume-flux')
+            save_initial_state(job,workspace,case)
+            auxiliary=workspace/'output/native-initial-state/potential-initializer/Phi'
+            self.assertEqual(auxiliary.read_bytes(),original)
+            self.assertEqual((case/'0/Phi').read_bytes(),original)
+            self.assertFalse((workspace/'output/native-initial-state/0/Phi').exists())
+            snapshots=[p for p in (workspace/'output/native-initial-state').rglob('*') if p.is_file()]
+            descriptors=[{'path':p.relative_to(workspace).as_posix(),'bytes':p.stat().st_size,'sha256':file_digest(p)} for p in snapshots]
+            self.assertEqual(len(file_descriptors(descriptors,None)),len(snapshots))
+            self.assertEqual(metadata['initialStateArchiveMapping']['native-case/0/Phi'],'native-initial-state/potential-initializer/Phi')
+            if sys.platform=='linux':
+                self.assertEqual((workspace/'output/native-initial-state/0/phi').read_bytes(),b'contract-only-volume-flux')
+                self.assertEqual((case/'0/phi').read_bytes(),b'contract-only-volume-flux')
     def test_cli_uses_distinct_fixed_profile_revisions_without_solver(self):
         spec=importlib.util.spec_from_file_location('benchmark_cli_contract',ROOT/'tools/cfd_worker/run.py');cli=importlib.util.module_from_spec(spec);spec.loader.exec_module(cli)
         for profile,revision in (('transient-cavity-v1','fixture-v1'),('cavitation-bullet-v1','fixture-v3')):

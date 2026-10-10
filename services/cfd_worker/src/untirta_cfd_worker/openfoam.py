@@ -30,7 +30,11 @@ def save_initial_state(job: Job, workspace: Path, case: Path) -> None:
     destination = workspace / 'output' / 'native-initial-state' / '0'
     destination.mkdir(parents=True, exist_ok=False)
     for path in paths:
-        shutil.copyfile(path, destination / path.name)
+        target = destination / path.name
+        if job.profile == 'cavitation-bullet-v1' and path.name == 'Phi':
+            target = destination.parent / 'potential-initializer' / 'Phi'
+            target.parent.mkdir(exist_ok=False)
+        shutil.copyfile(path, target)
 
 def _logged_seconds(line: str, label: str) -> float | None:
     """Foundation 12 logs SI seconds bare or with `s`; no other units convert."""
@@ -163,7 +167,7 @@ def prepare(job: Job, workspace: Path, fixture_root: Path) -> tuple[Path, list[l
     if job.profile == 'cavitation-bullet-v1':
         stages += [['potentialFoam', '-pName', 'p_rgh', '-case', str(case)]]
     stages += [['foamRun', '-case', str(case)]]
-    metadata = {'distribution': 'OpenFOAM-Foundation', 'version': '12', 'sourceCommit': provenance['commit'], 'profile': job.profile, 'physicalModel': physical_label, 'benchmarkOverrides': changes, 'meshOverride': {'surfaceLevel': 0, 'regionLevel': 0, 'maxCells': 100000, 'snap': False, 'addLayers': False, 'meshProfileRevision': 'castellated-staircase-uniform-v3', 'geometryApproximation': 'castellated-staircase'} if job.profile == 'cavitation-bullet-v1' else None, 'meshLimitations': ['Castellated staircase cells approximate the immutable STL boundary; no exact smooth surface geometry claim.', 'Unchanged native 15 x 15 x 50 background, no local refinement: approximately five cells across the source 0.01 m bullet diameter.', 'No snapping or boundary layers; coarse development mesh is not mesh-independent or suitable for quantitative geometry, cavitation-model or Pump acceptance claims.'] if job.profile == 'cavitation-bullet-v1' else [], 'quantityClaim': 'development-only; no Pump performance, NPSHR, NPSH3 or engineering acceptance claim'}
+    metadata = {'distribution': 'OpenFOAM-Foundation', 'version': '12', 'sourceCommit': provenance['commit'], 'profile': job.profile, 'physicalModel': physical_label, 'benchmarkOverrides': changes, 'meshOverride': {'surfaceLevel': 0, 'regionLevel': 0, 'maxCells': 100000, 'snap': False, 'addLayers': False, 'meshProfileRevision': 'castellated-staircase-uniform-v3', 'geometryApproximation': 'castellated-staircase'} if job.profile == 'cavitation-bullet-v1' else None, 'meshLimitations': ['Castellated staircase cells approximate the immutable STL boundary; no exact smooth surface geometry claim.', 'Unchanged native 15 x 15 x 50 background, no local refinement: approximately five cells across the source 0.01 m bullet diameter.', 'No snapping or boundary layers; coarse development mesh is not mesh-independent or suitable for quantitative geometry, cavitation-model or Pump acceptance claims.'] if job.profile == 'cavitation-bullet-v1' else [], 'initialStateArchiveMapping': {'native-case/0/Phi': 'native-initial-state/potential-initializer/Phi', 'native-case/0/phi': 'native-initial-state/0/phi'} if job.profile == 'cavitation-bullet-v1' else {}, 'quantityClaim': 'development-only; no Pump performance, NPSHR, NPSH3 or engineering acceptance claim'}
     return (case, stages, metadata)
 
 def field_dimensions(text: str) -> str | None:
@@ -243,7 +247,7 @@ def collect(job: Job, workspace: Path, case: Path, *, log_name='foamRun.log', ta
         mesh_paths = sorted((path for path in (case / 'constant' / 'polyMesh').rglob('*') if path.is_file()))
         settings_paths = sorted((path for path in case.rglob('*') if path.is_file() and ('system' in path.relative_to(case).parts or 'constant' in path.relative_to(case).parts) and ('polyMesh' not in path.relative_to(case).parts) and ('geometry' not in path.relative_to(case).parts)))
         settings_paths += sorted((path for path in (folder / 'uniform').rglob('*') if path.is_file()))
-        initial_paths = sorted((workspace / 'output' / 'native-initial-state' / '0').glob('*'))
+        initial_paths = sorted((path for path in (workspace / 'output' / 'native-initial-state').rglob('*') if path.is_file()))
         native = build_checkpoint(binding=job.binding(), solver={'adapter': 'openfoam', 'distribution': 'OpenFOAM-Foundation', 'version': '12'}, method={'id': job.profile, 'rotationModel': 'stationary', 'physicalModel': 'single-phase-incompressible' if job.profile == 'transient-cavity-v1' else 'liquid-vapour-cavitation'}, time_state=state, motion={'mode': 'stationary', 'rotorAngleRad': None, 'angularSpeedRadS': None, 'axis': None, 'origin': None, 'motionLawSha256': None}, interface={'type': 'none', 'identifiers': [], 'configurationSha256': None}, native_files=[dict(item, role='field') for item in files], mesh_files=[_descriptor(path, workspace) for path in mesh_paths], settings_files=[_descriptor(path, workspace) for path in settings_paths], setup_state={'initialStateSavedBeforePreview': True, 'initialStateFiles': [_descriptor(path, workspace) for path in initial_paths], 'sequence': ['setup-saved', 'initialized', 'initial-state-saved', 'solved', 'checkpoint-saved']}, checkpoint_id='native-' + checkpoint_prefix + folder.name)
         native_path = workspace / 'checkpoints' / ('native-' + checkpoint_prefix + folder.name + '.json')
         write_json(native_path, native)
