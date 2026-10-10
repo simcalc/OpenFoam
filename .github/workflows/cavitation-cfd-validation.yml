@@ -1,0 +1,97 @@
+name: Cavitation CFD development validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cfd-development-validation
+  cancel-in-progress: false
+
+jobs:
+  numerical-development-benchmark:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.repository.private == false && github.repository == 'simcalc/OpenFoam' && vars.PUBLIC_EDUCATIONAL_RUNS_ENABLED == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            services/cfd_worker
+            tools/cfd_worker
+            tests
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12.10'
+      - name: Verify public educational standard-runner scope
+        id: allowance
+        run: python -B tools/cfd_worker/public_runner_guard.py
+      - name: Contract and process resource regression (not a CFD solve)
+        run: python -B -m unittest discover -s tests -v
+      - name: Install checksum-pinned OpenFOAM Foundation 12
+        run: bash tools/cfd_worker/install_openfoam12.sh
+      - name: Real bounded cavitation development fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          # OpenFOAM's environment functions use optional failing probes.
+          # Capture its overall status, then restore the workflow's strict mode.
+          set +eu
+          source /opt/openfoam12/etc/bashrc
+          foam_source_status=$?
+          set -euo pipefail
+          if (( foam_source_status != 0 )); then
+            printf 'OpenFOAM environment setup failed (exit %s).\n' "$foam_source_status" >&2
+            exit "$foam_source_status"
+          fi
+          if [[ "${WM_PROJECT_VERSION:-}" != "12" ]]; then
+            printf 'OpenFOAM Foundation 12 environment is required.\n' >&2
+            exit 2
+          fi
+          for foam_program in blockMesh checkMesh foamRun snappyHexMesh potentialFoam; do
+            if ! command -v "$foam_program" >/dev/null; then
+              printf 'Required OpenFOAM executable is unavailable: %s\n' "$foam_program" >&2
+              exit 2
+            fi
+          done
+          # Keep the artifact parent writable by the unprivileged runner;
+          # the bounded scope needs root to manage its isolated cgroup.
+          mkdir -p outputs/cfd-worker
+          sudo --preserve-env=PATH,LD_LIBRARY_PATH,WM_PROJECT_VERSION,WM_PROJECT_DIR,FOAM_LIBBIN,FOAM_APPBIN,FOAM_ETC \
+            systemd-run --scope --unit="untirta-cavitation-${GITHUB_RUN_ID}" \
+            -p Delegate=yes -p MemoryMax=2147483648 -p MemorySwapMax=0 -p CPUQuota=100% -p TasksMax=32 \
+            "$(command -v python)" -B tools/cfd_worker/run.py --benchmark cavitation-bullet-v1 \
+            --workspace outputs/cfd-worker --report outputs/cavitation-benchmark.json \
+            2>&1 | tee outputs/cavitation-run.log
+      - name: Verify FREE storage again and prepare bounded output evidence
+        run: |
+          python -B tools/cfd_worker/public_runner_guard.py
+          python -B tools/cfd_worker/prepare_artifact.py --report outputs/cavitation-benchmark.json --native-export --output outputs/cavitation-cfd-evidence.zip
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cavitation-cfd-development-evidence
+          path: |
+            outputs/cavitation-cfd-evidence.zip
+            outputs/cavitation-cfd-evidence.manifest.json
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0
+      - name: Preserve bounded sanitized failure diagnostics
+        id: diagnostics
+        if: ${{ failure() && !cancelled() && steps.allowance.outcome == 'success' }}
+        run: |
+          python -B tools/cfd_worker/public_runner_guard.py
+          python -B tools/cfd_worker/prepare_diagnostics.py --root outputs --report outputs/cavitation-benchmark.json --output outputs/cavitation-cfd-diagnostics.zip
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: ${{ failure() && steps.diagnostics.outcome == 'success' }}
+        with:
+          name: cavitation-cfd-development-diagnostics
+          path: outputs/cavitation-cfd-diagnostics.zip
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0

@@ -1,0 +1,182 @@
+{
+  "schemaVersion": "untirta.cfd-fixture-provenance.v1",
+  "repository": "https://github.com/OpenFOAM/OpenFOAM-12",
+  "commit": "0b487fc98b88d3e8dc3c3ead4662e7632dd5e7dd",
+  "license": "GPL-3.0-or-later",
+  "files": [
+    {
+      "path": "transient-cavity-v1/0/U",
+      "sourcePath": "tutorials/incompressibleFluid/cavity/0/U",
+      "sha256": "fb01f525e4200e910cf986dc34538f203ce5e35152b4cc5d4bd7d8b034c524b6",
+      "bytes": 953
+    },
+    {
+      "path": "transient-cavity-v1/0/epsilon",
+      "sourcePath": "tutorials/incompressibleFluid/cavity/0/epsilon",
+      "sha256": "78f51b7f918fb1a73572598033a90ad9c49ba1e4ac6bcb5112c23daf73070078",
+      "bytes": 1042
+    },
+    {
+      "path": "transient-cavity-v1/0/k",
+      "sourcePath": "tutorials/incompressibleFluid/cavity/0/k",
+      "sha256": "d8c1744aa21734e074bb28c9921319916d2f595282e5b2369cbc42599b692e8f",
+      "bytes": 1028
+    },
+    {
+      "path": "transient-cavity-v1/0/nuTilda",
+      "sourcePath": "tutorials/incompressibleFluid/cavity/0/nuTilda",
+      "sha256": "ca2b4737e537a2aaa6c8692c2a1b84adfdc727b5188c61a4017bb12dbb73c160",
+      "bytes": 920
+    },
+    {
+      "path": "transient-cavity-v1/0/nut",
+      "sourcePath": "tutorials/incompressibleFluid/cavity/0/nut",
+      "sha256": "bc2cb1a49149ab10a5fc95622a03096cd96d81d82c28193411f0fa65d7ab2799",
+      "bytes": 1014
+    },
+    {
+      "path": "transient-cavity-v1/0/omega",
+      "sourcePath": "tutorials/incompressibleFluid/cavity/0/omega",
+      "sha256": "d291ee4de27dcd75dcd98bac7d891c946daf369be8489abd2eb5a74787d3cfff",
+      "bytes": 1027
+    },
+    {
+      "path": "transient-cavity-v1/0/p",
+      "sourcePath": "tutorials/incompressibleFluid/cavity/0/p",
+      "sha256": "d4bacc4f904d3483b70892a0869f9bf8c1a8c185a0915ad68f597ba3d887d688",
+      "bytes": 914
+    },
+    {
+      "path": "transient-cavity-v1/constant/momentumTransport",
+      "sourcePath": "tutorials/incompressibleFluid/cavity/constant/momentumTransport",
+      "sha256": "8233999c528df6d9b5ab8ba283e10c6592c077327d915e4e0c517c965ad4eacb",
+      "bytes": 791
+    },
+    {
+      "path": "transient-cavity-v1/constant/physicalProperties",
+      "sourcePath": "tutorials/incompressibleFluid/cavity/constant/physicalProperties",
+      "sha256": "35023d390fb2813f367cdd50fdb0383ea77ab9d8273105bb10ab589e265987cf",
+      "bytes": 740
+    },
+    {
+      "path": "transient-cavity-v1/system/blockMeshDict",
+      "sourcePath": "tutorials/incompressibleFluid/cavity/system/blockMeshDict",
+      "sha256": "964b52a737dbbf7a458dfe360e388f3917ba70ef01dab92aa5a8242704aa9daa",
+      "bytes": 1254
+    },
+    {
+      "path": "transient-cavity-v1/system/controlDict",
+      "sourcePath": "tutorials/incompressibleFluid/cavity/system/controlDict",
+      "sha256": "8d596145c7d423c94ec7a797dff8de58a5b8ede21317ceb0940093b3c5c62c61",
+      "bytes": 1062
+    },
+    {
+      "path": "transient-cavity-v1/system/fvSchemes",
+      "sourcePath": "tutorials/incompressibleFluid/cavity/system/fvSchemes",
+      "sha256": "9a3810fbceac7e156523d81549e9e935f0d780232a67ad8007f40c01133f8d24",
+      "bytes": 1320
+    },
+    {
+      "path": "transient-cavity-v1/system/fvSolution",
+      "sourcePath": "tutorials/incompressibleFluid/cavity/system/fvSolution",
+      "sha256": "1523433c53a27ff6cb7a4bdcc4f7f9fd20b6555e3319a6ae24b07d3ceb42d589",
+      "bytes": 1221
+    },
+    {
+      "path": "cavitation-bullet-v1/0/Phi",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/0/Phi",
+      "sha256": "d2012449c20c31d71487f0c62fb9bf6221ff9ba2ad5e2df20d8595d8487e9151",
+      "bytes": 1024
+    },
+    {
+      "path": "cavitation-bullet-v1/0/U.orig",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/0/U.orig",
+      "sha256": "c2a7a860d5f322e96afafb0f231125c8b901647a6dfaa951f8a0674c265459a4",
+      "bytes": 1078
+    },
+    {
+      "path": "cavitation-bullet-v1/0/alpha.water",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/0/alpha.water",
+      "sha256": "348f306f23500ecdfea01933c0388ccec6ca339c94009aec04d646f35ff70a41",
+      "bytes": 1057
+    },
+    {
+      "path": "cavitation-bullet-v1/0/p_rgh.orig",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/0/p_rgh.orig",
+      "sha256": "6caafa26a9be3c6ae65db172b138f2d6716d73b8b37f3e60edffdcfdd29575eb",
+      "bytes": 1037
+    },
+    {
+      "path": "cavitation-bullet-v1/constant/fvModels",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/constant/fvModels",
+      "sha256": "415d836d0887073f9762240b8ec30387ad4059e3808a40eb7d8826ac9757c46e",
+      "bytes": 1346
+    },
+    {
+      "path": "cavitation-bullet-v1/constant/g",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/constant/g",
+      "sha256": "1c557925136cce5981281b4e6f71884c210971662cba70d0d03e6450bfa5d114",
+      "bytes": 748
+    },
+    {
+      "path": "cavitation-bullet-v1/constant/geometry/bullet.stl.gz",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/constant/geometry/bullet.stl.gz",
+      "sha256": "f47f9e1146c8da1be2c5c31a2536e32caba918c65a72b64392ee64a8fde760e3",
+      "bytes": 766343
+    },
+    {
+      "path": "cavitation-bullet-v1/constant/momentumTransport",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/constant/momentumTransport",
+      "sha256": "7a7489157d4b57b8b3e2aea7c1fb276c482582f00ffc514fc6ac0c45848f129e",
+      "bytes": 678
+    },
+    {
+      "path": "cavitation-bullet-v1/constant/phaseProperties",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/constant/phaseProperties",
+      "sha256": "59e45fdf6f2206494b9cae3f224baf64a6c0e7c1fd75b5787fcc9517686c2a68",
+      "bytes": 735
+    },
+    {
+      "path": "cavitation-bullet-v1/constant/physicalProperties.vapour",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/constant/physicalProperties.vapour",
+      "sha256": "e6acd525ac0a7584c0764ec880157bf164406f91fbf5d83951880161c9a1489a",
+      "bytes": 770
+    },
+    {
+      "path": "cavitation-bullet-v1/constant/physicalProperties.water",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/constant/physicalProperties.water",
+      "sha256": "d92c0fefc976ff489e204d22d501b0341ea298fe62a36d60b18158153f2197d4",
+      "bytes": 762
+    },
+    {
+      "path": "cavitation-bullet-v1/system/blockMeshDict",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/system/blockMeshDict",
+      "sha256": "cee8464c4512c329003ccacbbbc9c4f18b7c197af268f7a1899981587890b752",
+      "bytes": 1281
+    },
+    {
+      "path": "cavitation-bullet-v1/system/controlDict",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/system/controlDict",
+      "sha256": "77be88012460f1bf1ac0223c4383cfdebdc43d62db3b457250474b4f3990a777",
+      "bytes": 1227
+    },
+    {
+      "path": "cavitation-bullet-v1/system/fvSchemes",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/system/fvSchemes",
+      "sha256": "0d050bc55963c3288b17371776f1e96aa2d29371f90fed651c7e65bb7bdf512b",
+      "bytes": 1275
+    },
+    {
+      "path": "cavitation-bullet-v1/system/fvSolution",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/system/fvSolution",
+      "sha256": "40843da6a0e7b0d28c7ebd0bd0514e4629b76f93df618a7924d31927fb0c8bcf",
+      "bytes": 2102
+    },
+    {
+      "path": "cavitation-bullet-v1/system/snappyHexMeshDict",
+      "sourcePath": "tutorials/incompressibleVoF/cavitatingBullet/system/snappyHexMeshDict",
+      "sha256": "a21b2dafa6f6962ddb062c1402b509813c418d290555075602a64b593faaade0",
+      "bytes": 9919
+    }
+  ]
+}
