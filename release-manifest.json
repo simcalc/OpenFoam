@@ -3,7 +3,7 @@
   "repository": "simcalc/OpenFoam",
   "canonicalSource": "private system repository; no live mirror or private history publication",
   "scope": "fixed OpenFOAM educational benchmarks only",
-  "published": false,
+  "published": true,
   "actualLocalCfdRun": false,
   "officialFixtureFiles": 31,
   "excluded": [
@@ -349,7 +349,7 @@
       "bytes": 45323,
       "projection": "byte-identical bounded educational output tool",
       "canonicalSourcePath": "tools/cfd_worker/verify_educational_run.py",
-      "canonicalSourceSha256": "b8fae6d1fba55885e847686c605a9dddaf1264a3b69f4e6586b37eac10c88d56"
+      "canonicalSourceSha256": "c22f7b8ec9820f2946904ecee6a4066d29df42c06d3d8ee642a584ce1f3e1473"
     },
     {
       "path": "tools/cfd_worker/prepare_diagnostics.py",
@@ -383,19 +383,19 @@
     },
     {
       "path": ".github/workflows/transient-cfd-validation.yml",
-      "sha256": "8cee4e9a6bc1879f770151cc75eae8b33dd306b58f416f757585d5e49cb33de1",
-      "bytes": 4511,
+      "sha256": "61ad4f8868bf6077465df6c002711bb76fa8854121fd5014c95f9a806a958ef8",
+      "bytes": 5223,
       "projection": "manual PUBLIC-only standard runner; no private allowance variables/secrets",
       "canonicalSourcePath": ".github/workflows/transient-cfd-validation.yml",
-      "canonicalSourceSha256": "68aa5b76e1ecc868689ee49dbbeccec97db859c7838acc86efad395269d6104c"
+      "canonicalSourceSha256": "84436b82f81f19646afbbb8c6b6a5d3bb0d55649884c3df0df32b0b0879f8c6c"
     },
     {
       "path": ".github/workflows/cavitation-cfd-validation.yml",
-      "sha256": "998fb57f5c46ef7ef63e5617657e40651a227502278c071d3e1b792d86670cf1",
-      "bytes": 4501,
+      "sha256": "100731cdc8c19535007e9a73fc58930071d24d1bf46e8f8e4cad6fff2353c906",
+      "bytes": 5213,
       "projection": "manual PUBLIC-only standard runner; no private allowance variables/secrets",
       "canonicalSourcePath": ".github/workflows/cavitation-cfd-validation.yml",
-      "canonicalSourceSha256": "976b658530a0a68657d653231766c05fb4e7d8db975cf55e2948fd7991797968"
+      "canonicalSourceSha256": "e2f5c4ce91495be770fa4c0c9c3ae258d0b2534fb6f27e90e81f575f7c250a4a"
     },
     {
       "path": ".gitignore",
@@ -415,5 +415,6 @@
       "bytes": 8565,
       "projection": "new public educational transport"
     }
-  ]
+  ],
+  "initialSourceCommit": "f9646b6115fbd13d4d57bb34bc00b14097848b9a"
 }
