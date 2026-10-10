@@ -28,6 +28,8 @@ from untirta_cfd_worker.artifacts import ArtifactLimits, inspect_artifact, _work
 from untirta_cfd_worker.checkpoint import strict_json
 from untirta_cfd_worker.contracts import WorkerDiagnostic
 from untirta_cfd_worker.openfoam import field_dimensions
+from untirta_cfd_worker import impeller
+from untirta_cfd_worker.profiles import IMPELLER_PROFILES, benchmark_reference
 
 PIN = '0b487fc98b88d3e8dc3c3ead4662e7632dd5e7dd'
 PROFILES = {
@@ -36,7 +38,13 @@ PROFILES = {
                           'solverStep': 'Real bounded physical-transient development fixture'},
     'cavitation-bullet-v1': {'workflow': '.github/workflows/cavitation-cfd-validation.yml',
                            'artifact': 'cavitation-cfd-development-evidence', 'time': 0.00001,
-                           'solverStep': 'Real bounded cavitation development fixture'}}
+                           'solverStep': 'Real bounded cavitation development fixture'},
+    'impeller-transient-v1': {'workflow': '.github/workflows/impeller-cfd-validation.yml',
+                             'artifact': 'impeller-cfd-development-evidence', 'time': 0.01,
+                             'solverStep': 'Real bounded fixed educational impeller fixture'},
+    'impeller-mrf-v1': {'workflow': '.github/workflows/impeller-cfd-validation.yml',
+                       'artifact': 'impeller-cfd-development-evidence', 'time': None,
+                       'solverStep': 'Real bounded fixed educational impeller fixture'}}
 NUM = r'[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?'
 BULLET_MESH_V3={'surfaceLevel':0,'regionLevel':0,'maxCells':100000,'snap':False,'addLayers':False,
                 'meshProfileRevision':'castellated-staircase-uniform-v3','geometryApproximation':'castellated-staircase'}
@@ -120,9 +128,9 @@ def native_list(raw):
     return int(match[1]),match[2]
 
 
-def mesh_evidence(files, prefix):
+def mesh_evidence(files, prefix, *, points_path=None):
     def raw(name):
-        path = prefix+'/constant/polyMesh/'+name
+        path = points_path if name=='points' and points_path is not None else prefix+'/constant/polyMesh/'+name
         if path not in files: reject('CFD_EDUCATIONAL_MESH_REQUIRED','Include points/faces/owner/neighbour from the same generated native mesh.')
         return files[path]
     points_count,points_text = native_list(raw('points'))
@@ -179,12 +187,228 @@ def _entry(raw,key):
     return value
 
 
+class InertNativeView:
+    """Read-only native byte view used by the adapter's exact topology gate.
+
+    The inspected archive is already bounded. No archive member is executed,
+    extracted to disk, or substituted by a regenerated mesh.
+    """
+    def __init__(self,files,path):
+        self.files,self.path=files,path
+
+    def __truediv__(self,name):
+        return InertNativeView(self.files,self.path+'/'+name)
+
+    def read_text(self,encoding='utf-8'):
+        return self.files[self.path].decode(encoding)
+
+    def open(self,mode):
+        if mode!='rb': reject('CFD_EDUCATIONAL_READ_ONLY_REQUIRED','Native evidence views allow binary reads only.')
+        return BytesIO(self.files[self.path])
+
+
+def impeller_source_evidence(files,prefix,profile):
+    fixture=ROOT/'tools/cfd_worker/fixtures/openfoam12-impeller'
+    source=impeller._verified_fixture(fixture)
+    physical=profile=='impeller-transient-v1'
+    expected={}
+    source_rows={item['path']:item for item in source['files']}
+    for relative in ('system/blockMeshDict','system/controlDict','system/createNonConformalCouplesDict',
+                     'system/decomposeParDict','system/fvSchemes','system/fvSolution',
+                     'constant/physicalProperties','constant/momentumTransport'):
+        source_path=('mrf-reference/'+relative if not physical and relative in ('system/fvSchemes','system/fvSolution') else 'native/'+relative)
+        expected[relative]=((fixture/source_path).read_text(encoding='utf-8'),source_path)
+    motion='constant/dynamicMeshDict' if physical else 'constant/MRFProperties'
+    source_path=('native/' if physical else 'mrf-reference/')+motion
+    expected[motion]=((fixture/source_path).read_text(encoding='utf-8'),source_path)
+    changes={'writeFormat':'ascii','writePrecision':'12','runTimeModifiable':'false','adjustTimeStep':'no',
+             'writeControl':'timeStep','purgeWrite':'0',
+             'endTime':'0.01' if physical else '50','deltaT':'0.001' if physical else '1','writeInterval':'10' if physical else '50'}
+    control,control_source=expected['system/controlDict']
+    for key,value in changes.items():
+        control,count=re.subn(r'(?m)^(\s*'+re.escape(key)+r'\s+)[^;]+;',lambda match:match[1]+value+';',control)
+        if count!=1: reject('CFD_EDUCATIONAL_SOURCE_PIN_MISMATCH','Require one exact explicit control setting per reviewed fixed impeller override.')
+    expected['system/controlDict']=(control,control_source)
+    if not physical:
+        mrf,mrf_source=expected[motion]
+        mrf=mrf.replace('cellZone    rotor;','cellZone    rotating;').replace('axis        (0 0 1);','axis        (1 0 0);')
+        expected[motion]=(mrf,mrf_source)
+    prohibited=['system/functions']+(['constant/MRFProperties'] if physical else ['constant/dynamicMeshDict'])
+    if any(prefix+'/'+path in files for path in prohibited):
+        reject('CFD_EDUCATIONAL_PROFILE_SETTINGS_MISMATCH','Keep the exact reviewed derived fixed profile; auxiliary function objects and the other rotation model are not part of this smoke.')
+    checked=[]
+    for relative,(text,source_path) in expected.items():
+        path=prefix+'/'+relative
+        if path not in files or files[path].decode('utf-8').replace('\r\n','\n')!=text.replace('\r\n','\n'):
+            reject('CFD_EDUCATIONAL_PROFILE_SETTINGS_MISMATCH','Match every package-pinned impeller/MRF reference dictionary with only its explicit documented derivatives.')
+        checked.append({'path':path,'tutorialSourcePath':source_path,'tutorialSourceSha256':source_rows[source_path]['sha256'],
+                        'nativeSha256':sha256(files[path]).hexdigest()})
+    return {'sourcePackage':source['sourcePackage'],'sourceCase':source['sourceCase'],'checkedSettings':checked,
+        'geometryIsEducationalTutorial':True,'meshOverride':None,
+        'geometryLimitations':['Official idealized30-degree radial impeller passage; no full volute or manufactured Pump identity.',
+                               '9371 native cells and a short fixed run do not establish mesh independence or converged Pump performance.'],
+        'mesherExecutionAuthenticityVerified':False,'quantitativeGeometryAccuracyValidated':False}
+
+
+def impeller_ncc_evidence(files,prefix):
+    boundary=foam_body(files[prefix+'/constant/polyMesh/boundary'])
+    expected=[]
+    for side in ('In','Out'):
+        patches=['nonCouple'+side+'1','nonCouple'+side+'2']
+        for angle in range(0,360,30):
+            base='nonConformalCouple'+side+str(angle)
+            for index,patch in enumerate(patches):
+                name=base+'_on_'+patch
+                blocks=re.findall(r'\b'+re.escape(name)+r'\s*\{([^{}]*)\}',boundary,re.S)
+                neighbour=base+'_on_'+patches[1-index]
+                if (len(blocks)!=1 or not re.search(r'\btype\s+nonConformalCyclic\s*;',blocks[0])
+                        or not re.search(r'\boriginalPatch\s+'+patch+r'\s*;',blocks[0])
+                        or not re.search(r'\bneighbourPatch\s+'+neighbour+r'\s*;',blocks[0])):
+                    reject('CFD_EDUCATIONAL_NCC_TOPOLOGY_MISMATCH','Preserve all48 native nonConformalCyclic patches for the24 exact source In/Out couples, with original and reciprocal neighbour patch bindings; NCC is not AMI.')
+                expected.append(name)
+    return {'type':'NCC','configuredCouples':24,'nativeCyclicPatchCount':len(expected),'nativePatchNames':expected,
+            'nativeBoundarySha256':sha256(files[prefix+'/constant/polyMesh/boundary']).hexdigest(),
+            'sourceConfigurationSha256':sha256(files[prefix+'/system/createNonConformalCouplesDict']).hexdigest()}
+
+
+def impeller_logged_iterations(log):
+    values=[value for line in log.splitlines() if (value:=logged_seconds(line,'Time')) is not None]
+    if values!=list(range(1,51)):
+        reject('CFD_EDUCATIONAL_STEADY_ITERATION_MISMATCH','Require fifty actual consecutive steady solver iterations1..50; native Time labels are not physical seconds for MRF.')
+    return {'interpretation':'steady-iteration','iteration':50,'loggedIterationCount':len(values),
+            'physicalTimeSeconds':None,'timeStepSeconds':None,'step':None}
+
+
+def impeller_student_equations(profile,*,states):
+    mn=lambda value:'<mn>'+escape(str(value))+'</mn>'
+    rows=[equation('CFD_EDUCATIONAL_IMPELLER_CELLS','Structured native-cell count',
+        '<mi>N</mi><mo>=</mo><mo>∑</mo><msub><mi>N</mi><mtext>x,b</mtext></msub><msub><mi>N</mi><mtext>y,b</mtext></msub><msub><mi>N</mi><mtext>z,b</mtext></msub>',
+        {'rotorBlocks[1]':3,'rotorNx[1]':11,'rotorNy[1]':11,'rotorNz[1]':17,'statorBlocks[1]':2,'statorNx[1]':10,'statorNy[1]':10,'statorNz[1]':16},
+        '<mn>3</mn><mo>×</mo><mn>11</mn><mo>×</mo><mn>11</mn><mo>×</mo><mn>17</mn><mo>+</mo><mn>2</mn><mo>×</mo><mn>10</mn><mo>×</mo><mn>10</mn><mo>×</mo><mn>16</mn>',9371,'cells'),
+        equation('CFD_EDUCATIONAL_IMPELLER_OMEGA','Angular speed from source RPM',
+        '<mi>ω</mi><mo>=</mo><mfrac><mrow><mn>2</mn><mi>π</mi><mi>n</mi></mrow><mn>60</mn></mfrac>',
+        {'n[rpm]':60,'secondsPerMinute[s/min]':60},'<mfrac><mrow><mn>2</mn><mi>π</mi><mo>×</mo><mn>60</mn></mrow><mn>60</mn></mfrac>',impeller.OMEGA,'rad/s')]
+    if profile=='impeller-transient-v1':
+        elapsed=states[-1]['physicalTimeSeconds']; dt=states[-1]['timeStepSeconds']
+        rows += [equation('CFD_EDUCATIONAL_ELAPSED_TIME','Elapsed physical time','<mi>T</mi><mo>=</mo><msub><mi>t</mi><mi>end</mi></msub><mo>−</mo><msub><mi>t</mi><mn>0</mn></msub>',
+                    {'t0[s]':0,'tend[s]':elapsed},mn(elapsed)+'<mo>−</mo><mn>0</mn>',elapsed,'s'),
+                 equation('CFD_EDUCATIONAL_PHYSICAL_STEPS','Fixed physical steps','<mi>N</mi><mo>=</mo><mfrac><mi>T</mi><mi>Δt</mi></mfrac>',
+                    {'T[s]':elapsed,'dt[s]':dt},'<mfrac>'+mn(elapsed)+mn(dt)+'</mfrac>',len(states),'1'),
+                 equation('CFD_EDUCATIONAL_IMPELLER_ANGLE','Rotor angle at the actual saved physical time','<mi>θ</mi><mo>=</mo><mi>ω</mi><mi>T</mi>',
+                    {'omega[rad/s]':impeller.OMEGA,'T[s]':elapsed},mn(impeller.OMEGA)+'<mo>×</mo>'+mn(elapsed),impeller.OMEGA*elapsed,'rad')]
+    else:
+        rows.append(equation('CFD_EDUCATIONAL_STEADY_ITERATIONS','Actual steady iterations (not physical time)',
+            '<msub><mi>N</mi><mi>iterations</mi></msub><mo>=</mo><msub><mi>i</mi><mi>last</mi></msub>',
+            {'firstIteration[1]':1,'lastIteration[1]':50},'<mn>50</mn>',50,'iterations'))
+    for row in rows:
+        row['source']={'title':'Checksum-bound OpenFOAM Foundation12 package20250206 native impeller and MRF reference',
+            'url':'https://downloads.sourceforge.net/project/foam/foam/ubuntu/dists/noble/main/binary-amd64/openfoam12_20250206_amd64.deb',
+            'reference':'tutorials/incompressibleFluid/impeller; declared MRF derivatives from mixerVessel2DMRF; source package SHA-256 '+impeller.OPENFOAM_PACKAGE_SHA256}
+    return rows
+
+
+def verify_impeller_native(files,report,inspected,profile,mesh):
+    from untirta_cfd_worker.openfoam import verify_mesh_log
+    prefix='output/native-case'; physical=profile=='impeller-transient-v1'; folder='0.01' if physical else '50'
+    if mesh['cellCount']!=9371:
+        reject('CFD_EDUCATIONAL_MESH_PROFILE_MISMATCH','The unchanged official impeller blocks must produce9371 cells, including6171 rotating cells.')
+    if report.get('restart') or any(path.startswith('output/native-restart-case/') for path in files):
+        reject('CFD_EDUCATIONAL_RESTART_EVIDENCE_MISMATCH','The reviewed impeller profiles have no restart execution acceptance; retain their first-run checkpoint only.')
+    meshlog=files['output/logs/checkMesh.log'].decode('utf-8')
+    verify_mesh_log(meshlog); validate_mesh_log(meshlog,mesh)
+    for name in ('blockMesh','createNonConformalCouples','foamRun'):
+        if not re.search(r'(?m)^\s*End\s*$',files['output/logs/'+name+'.log'].decode('utf-8')):
+            reject('CFD_EDUCATIONAL_RUN_LOG_INCOMPLETE','Require complete actual blockMesh/NCC/foamRun logs for this exact fixed impeller run.')
+    log=files['output/logs/foamRun.log'].decode('utf-8')
+    if logged_mesh_time(log)!=0:
+        reject('CFD_EDUCATIONAL_LOG_TIME_MISMATCH','The fixed impeller must load its initial native mesh at index/time zero.')
+    if len(inspected['checkpoints'])!=1:
+        reject('CFD_EDUCATIONAL_CHECKPOINT_TIME_MISMATCH','Retain exactly one final paired native impeller checkpoint, without extra or mixed-profile solution states.')
+    cp=strict_json(files[inspected['checkpoints'][0]['path']])
+    expected_state={'interpretation':'physical','physicalTimeSeconds':0.01,'timeStepSeconds':0.001,'step':10,'iteration':None} if physical else {
+        'interpretation':'steady-iteration','physicalTimeSeconds':None,'timeStepSeconds':None,'step':None,'iteration':50}
+    if (not {'timeInterpretation','physicalTimeSeconds','iteration'} <= set(report)
+            or cp['timeState']!=expected_state or report.get('timeInterpretation')!=expected_state['interpretation']
+            or report.get('physicalTimeSeconds')!=expected_state['physicalTimeSeconds'] or report.get('iteration')!=expected_state['iteration']):
+        reject('CFD_EDUCATIONAL_TIME_INTERPRETATION_MISMATCH','Pair transient10×0.001s→0.01s or MRF50steady iterations with exact null inapplicable time fields; never relabel iterations as seconds.')
+    if physical:
+        states=logged_time_states(log,profile,files[prefix+'/system/controlDict'])
+        if len(states)!=10 or any(not math.isclose(state['physicalTimeSeconds'],(index+1)*0.001,abs_tol=1e-12) or state['timeStepSeconds']!=0.001 for index,state in enumerate(states)):
+            reject('CFD_EDUCATIONAL_TIME_STEP_MISMATCH','Complete all ten consecutive actual fixed0.001s integration steps through0.01s.')
+    else:
+        impeller_logged_iterations(log); states=[]
+    definitions={'U':(3,'0 1 -1 0 0 0 0'),'p':(1,'0 2 -2 0 0 0 0'),'k':(1,'0 2 -2 0 0 0 0'),
+                 'epsilon':(1,'0 2 -3 0 0 0 0'),'nut':(1,'0 2 -1 0 0 0 0')}
+    initial_fields={}
+    for name,(components,dimensions) in definitions.items():
+        path='output/native-initial-state/0/'+name
+        # Supplied initial dictionaries legitimately use $internalField in
+        # boundary values. Count declarations, not variable references. Final
+        # solved fields below use the adapter's stricter written-field gate.
+        if len(re.findall(r'(?<![\w$])internalField\s+',foam_body(files[path])))!=1:
+            reject('CFD_NATIVE_FIELD_INVALID','Retain exactly one initial internalField declaration; boundary $internalField references are distinct native dictionary substitutions.')
+        initial_fields[name]=field_evidence(files[path],cells=9371,components=components,dimensions=dimensions)
+    fields={}
+    for name,(components,dimensions) in definitions.items():
+        selected=[item for item in cp['nativeFiles'] if Path(item['path']).name==name]
+        if len(selected)!=1 or selected[0]['path']!=prefix+'/'+folder+'/'+name:
+            reject('CFD_EDUCATIONAL_NATIVE_FIELD_REQUIRED','Pair each finite U/p/k/epsilon/nut field at the exact final native time/iteration directory.')
+        impeller.checked_field(InertNativeView(files,selected[0]['path']),dimensions,components,9371)
+        fields[name]=field_evidence(files[selected[0]['path']],cells=9371,components=components,dimensions=dimensions)
+        fields[name].update(dimensions=dimensions,unit={'U':'m/s','p':'m2/s2','k':'m2/s2','epsilon':'m2/s3','nut':'m2/s'}[name])
+    uniform_path=prefix+'/'+folder+'/uniform/time'
+    if uniform_path not in {item['path'] for item in cp['settingsFiles']}:
+        reject('CFD_EDUCATIONAL_CHECKPOINT_TIME_MISMATCH','Include the actual saved uniform/time index/value/deltaT paired with this final native state.')
+    for key,value in [('value',0.01 if physical else 50),('deltaT',0.001 if physical else 1),('index',10 if physical else 50)]:
+        if not math.isclose(_entry(files[uniform_path],key),value,rel_tol=1e-8,abs_tol=1e-12):
+            reject('CFD_EDUCATIONAL_CHECKPOINT_TIME_MISMATCH','Match native uniform/time to the exact physical state or steady iteration; MRF native value/deltaT are not seconds.')
+    initial='output/native-initial-state/constant/polyMesh/points'
+    original_case_points=files.get(prefix+'/constant/polyMesh/points')
+    if ((original_case_points is not None and files[initial]!=original_case_points)
+            or initial not in {item['path'] for item in cp['setupState']['initialStateFiles']}):
+        reject('CFD_EDUCATIONAL_INITIAL_MESH_MISMATCH','Preserve the checksum-bound original mesh position before solving; final geometry must not replace the native initial snapshot.')
+    count=len(impeller.points(InertNativeView(files,initial)))
+    rotor=impeller.rotating_point_labels(InertNativeView(files,prefix+'/constant/polyMesh'),count)
+    ncc=impeller_ncc_evidence(files,prefix)
+    mesh_paths={item['path'] for item in cp['meshFiles']}
+    ncc_paths=[path for path in mesh_paths if path.startswith(prefix+'/') and path.endswith('/fvMesh/polyFaces')]
+    if not ncc_paths or physical and prefix+'/0.01/fvMesh/polyFaces' not in ncc_paths:
+        reject('CFD_EDUCATIONAL_NCC_TOPOLOGY_MISMATCH','Include actual finite-volume NCC polyFaces topology in the paired native checkpoint; moving NCC requires its final0.01s topology.')
+    for path in ncc_paths:
+        foam_body(files[path])
+    law=prefix+'/constant/'+('dynamicMeshDict' if physical else 'MRFProperties')
+    expected_motion={'mode':'sliding-mesh' if physical else 'mrf','rotorAngleRad':impeller.OMEGA*0.01 if physical else None,
+        'angularSpeedRadS':impeller.OMEGA,'axis':[1,0,0],'origin':[0,0,0],'motionLawSha256':sha256(files[law]).hexdigest()}
+    if cp['motion']!=expected_motion or cp['interface']!={'type':'NCC','identifiers':impeller.INTERFACE_NAMES,'configurationSha256':ncc['sourceConfigurationSha256']}:
+        reject('CFD_EDUCATIONAL_ROTOR_FRAME_MISMATCH','Bind the exact60rpm,+x-axis native motion law or fixed MRF frame with NCC, source configuration and saved rotor angle.')
+    if physical:
+        saved=prefix+'/0.01/polyMesh/points'
+        motion=impeller.verify_motion(InertNativeView(files,initial),InertNativeView(files,saved),0.01,rotor_points=rotor)
+        checkpoint_fields(cp,files,mesh,definitions,states[-1])
+    else:
+        if any(path.startswith(prefix+'/50/polyMesh/') for path in files):
+            reject('CFD_EDUCATIONAL_ROTOR_FRAME_MISMATCH','MRF uses a fixed mesh; moved final points cannot substitute for steady-frame geometry.')
+        motion={'mode':'mrf','fixedMeshPositionMatched':True,'rotatingCellCount':6171,'rotatingZonePointCount':len(rotor),
+                'physicalTimeSeconds':None,'rotorAngleRad':None}
+    return {'timeInterpretation':expected_state['interpretation'],'physicalEndTimeSeconds':0.01 if physical else None,
+        'physicalStepCount':10 if physical else None,'steadyIterationCount':None if physical else 50,
+        'initialFields':initial_fields,'fields':fields,'nccInterface':ncc,'meshMotionEvidence':motion,
+        'initialMeshPosition':{'path':initial,'sha256':sha256(files[initial]).hexdigest(),
+            'initialSnapshotChecksumMatched':True,'originalCasePointsSeparatelyPresent':original_case_points is not None,
+            'claim':'The checkpoint retains original points in its explicit initial-state snapshot; no missing native-case path is regenerated or aliased.'},
+        'equations':impeller_student_equations(profile,states=states),
+        'physicalRotorRestartVerified':False,'restartExecutionVerified':False,'absolutePressureBasisAvailable':False,
+        'densityKgM3':None,'vaporPressurePa':None,'headM':None,'npsh3M':None}
+
+
 def profile_source_evidence(files,prefix,profile):
     """Check immutable tutorial settings and explicitly documented smoke overrides.
 
     Generated mesh/initialized fields remain derived evidence; a settings match
     does not authenticate mesher execution or establish geometry independence.
     """
+    if profile in IMPELLER_PROFILES:
+        return impeller_source_evidence(files,prefix,profile)
     fixture=ROOT/'tools/cfd_worker/fixtures/openfoam12'
     provenance=strict_json((fixture/'provenance.json').read_bytes())
     if provenance.get('commit')!=PIN:
@@ -241,6 +465,24 @@ def validate_mesh_log(log,mesh):
 
 
 def validate_solver_profile(solver,profile):
+    if profile in IMPELLER_PROFILES:
+        source=impeller._verified_fixture(ROOT/'tools/cfd_worker/fixtures/openfoam12-impeller')
+        physical=profile=='impeller-transient-v1'
+        expected={'distribution':'OpenFOAM-Foundation','version':'12','profile':profile,
+            'sourcePackage':source['sourcePackage'],'sourceCase':source['sourceCase'],
+            'rotationModel':'sliding-mesh' if physical else 'mrf',
+            'timeInterpretation':'physical' if physical else 'steady-iteration',
+            'interfaceModel':'Foundation-12-NCC',
+            'physicalModel':'single-phase-incompressible-radial-impeller-educational-smoke'}
+        if not isinstance(solver,dict) or any(solver.get(key)!=value for key,value in expected.items()):
+            reject('CFD_EDUCATIONAL_SOLVER_METHOD_MISMATCH','Bind the exact package-derived Foundation12 impeller profile, NCC interface and physical-time or steady-iteration model.')
+        fluid=solver.get('fluid')
+        geometry=solver.get('geometry')
+        if (not isinstance(fluid,dict) or fluid.get('kinematicViscosityM2S')!=1e-5 or fluid.get('densityKgM3') is not None or fluid.get('vaporPressurePa') is not None
+                or not isinstance(geometry,dict) or geometry.get('nativeCellCount')!=9371 or geometry.get('rotatingCellZone')!='rotating'
+                or geometry.get('axis')!=[1,0,0] or geometry.get('originM')!=[0,0,0] or geometry.get('lengthUnit')!='m'):
+            reject('CFD_EDUCATIONAL_SOLVER_METHOD_MISMATCH','Retain the native9371-cell +x rotor/nu-only fluid basis; do not invent density, vapour pressure or absolute pressure.')
+        return
     if not isinstance(solver,dict) or any(solver.get(k)!=v for k,v in {'distribution':'OpenFOAM-Foundation','version':'12','sourceCommit':PIN,'profile':profile}.items()):
         reject('CFD_EDUCATIONAL_SOLVER_METHOD_MISMATCH','Associate the worker report with the exact pinned educational solver/profile.')
     expected=BULLET_MESH_V3 if profile=='cavitation-bullet-v1' else None
@@ -282,7 +524,8 @@ def initial_state_archive_evidence(files,solver,profile):
 
 
 def validate_stages(stages,profile):
-    required=['blockMesh','snappyHexMesh','checkMesh','potentialFoam','foamRun'] if profile=='cavitation-bullet-v1' else ['blockMesh','checkMesh','foamRun']
+    required=(['blockMesh','createNonConformalCouples','checkMesh','foamRun'] if profile in IMPELLER_PROFILES else
+              ['blockMesh','snappyHexMesh','checkMesh','potentialFoam','foamRun'] if profile=='cavitation-bullet-v1' else ['blockMesh','checkMesh','foamRun'])
     if not isinstance(stages,list): reject('CFD_EDUCATIONAL_STAGE_EVIDENCE_REQUIRED','Include bounded actual mesher/mesh-check/initialization/solver stage evidence.')
     positions=[]
     for name in required:
@@ -318,7 +561,9 @@ def logged_mesh_time(log):
 
 
 def logged_time_states(log,profile,control,*,initial_time=0,step_offset=0):
-    dt=_entry(control,'deltaT') if profile=='transient-cavity-v1' else None
+    if profile=='impeller-mrf-v1':
+        reject('CFD_EDUCATIONAL_TIME_INTERPRETATION_MISMATCH','MRF iterations are steady iteration indices, never physical seconds.')
+    dt=_entry(control,'deltaT') if profile in ('transient-cavity-v1','impeller-transient-v1') else None
     previous=initial_time; states=[]
     for line in log.splitlines():
         delta=logged_seconds(line,'deltaT')
@@ -435,13 +680,17 @@ def verify_educational_run(raw, sidecar, metadata, *, sidecar_bytes=None):
             files={item.filename:z.read(item) for item in z.infolist()}
         job=strict_json(files.get('input/job.json',b'')); reference=strict_json(files.get('reference/snapshot.json',b''))
         profile=job.get('caseProfile')
-        if profile not in PROFILES or reference.get('sourceCommit')!=PIN or reference.get('caseProfile')!=profile or job.get('parameters')!={}:
+        reference_matched=(reference==benchmark_reference(profile) if profile in IMPELLER_PROFILES else
+                           reference.get('sourceCommit')==PIN and reference.get('caseProfile')==profile)
+        if profile not in PROFILES or not reference_matched or job.get('parameters')!={}:
             reject('CFD_EDUCATIONAL_PROFILE_MISMATCH','Use one unchanged approved fixed educational profile with the exact tutorial source commit.')
         if job.get('inputRevision')!=('fixture-v3' if profile=='cavitation-bullet-v1' else 'fixture-v1'):
             reject('CFD_EDUCATIONAL_INPUT_REVISION_MISMATCH','Match the exact versioned fixture input: cavity fixture-v1 or bullet uniform-mesh fixture-v3. Older mesh studies retain their historical failure state.')
         association=github_association(metadata,profile)
         result['githubAssociation']=association
-        if inspected['solver']!={'adapter':'openfoam','distribution':'OpenFOAM-Foundation','version':'12'} or inspected['method']!={'id':profile,'rotationModel':'stationary','physicalModel':'single-phase-incompressible' if profile=='transient-cavity-v1' else 'liquid-vapour-cavitation'}:
+        rotation=('sliding-mesh' if profile=='impeller-transient-v1' else 'mrf') if profile in IMPELLER_PROFILES else 'stationary'
+        physical_model='single-phase-incompressible' if profile in ('transient-cavity-v1',*IMPELLER_PROFILES) else 'liquid-vapour-cavitation'
+        if inspected['solver']!={'adapter':'openfoam','distribution':'OpenFOAM-Foundation','version':'12'} or inspected['method']!={'id':profile,'rotationModel':rotation,'physicalModel':physical_model}:
             reject('CFD_EDUCATIONAL_SOLVER_METHOD_MISMATCH','Retain the exact OpenFOAM Foundation 12 educational physical model and stationary mesh method.')
         report=strict_json(files.get('output/manifest.json',b''))
         if report.get('status')!='DevelopmentBenchmarkComplete' or report.get('actualCfdRun') is not True or report.get('numericalSmokePassed') is not True or report.get('mainApplicationWrites') is not False or report.get('sourceInputUnchanged') is not True or report.get('referenceUnchanged') is not True or report.get('caseProfile')!=profile:
@@ -457,7 +706,17 @@ def verify_educational_run(raw, sidecar, metadata, *, sidecar_bytes=None):
         prefix='output/native-case'
         source_settings=profile_source_evidence(files,prefix,profile)
         initial_archive=initial_state_archive_evidence(files,solver,profile)
-        mesh=mesh_evidence(files,prefix)
+        mesh=mesh_evidence(files,prefix,points_path='output/native-initial-state/constant/polyMesh/points' if profile in IMPELLER_PROFILES else None)
+        if profile in IMPELLER_PROFILES:
+            evidence=verify_impeller_native(files,report,inspected,profile,mesh)
+            result.update(valid=True,status='EducationalRunEvidenceMatched',reasonCode='CFD_EDUCATIONAL_RUN_EVIDENCE_MATCHED',
+                profile=profile,binding=inspected['binding'],artifactSha256=inspected['artifactSha256'],archiveBytes=len(raw),
+                sidecarBytes=len(sidecar_bytes),combinedUploadBytes=len(raw)+len(sidecar_bytes),
+                sourceSettings=source_settings,initialStateArchive=initial_archive,mesh=mesh,**evidence,
+                sourceAndNativeIntegrityVerified=True,runEvidenceAssociationMatched=True,nativeNumericalSmokeChecksPassed=True,
+                temporalConvergenceVerified=False,meshIndependenceVerified=False,conservationAcceptanceVerified=False,
+                claim='Associated successful GitHub impeller run, exact native NCC/fields and physical motion or steady iterations only; offline authenticity and engineering acceptance remain separate.')
+            return result
         if profile=='transient-cavity-v1' and mesh['cellCount']!=400:
             reject('CFD_EDUCATIONAL_MESH_PROFILE_MISMATCH','The unchanged 20×20×1 cavity must produce 400 native cells.')
         if profile=='cavitation-bullet-v1' and mesh['cellCount']>15*15*50:
@@ -545,12 +804,15 @@ def markdown_report(result):
            'Hasil tetap **Imported Evidence**. NPSHr, status Pump, dan Main tidak ditulis atau diubah.','']
     if result['valid']:
         gh=result['githubAssociation']; mesh=result['mesh']
+        time_summary=(f"Iterasi steady MRF: {result['steadyIterationCount']}; waktu fisik tidak berlaku." if result['profile']=='impeller-mrf-v1' else
+                      f"Waktu fisik: {result['physicalEndTimeSeconds']} s; {result['physicalStepCount']} langkah tercatat.")
         lines += [f"Profil: `{result['profile']}`. Run: [{gh['runId']}]({gh['runUrl']}); workflow commit `{gh['headSha']}`.",'',
                   f"Mesh native: {mesh['cellCount']} cells, {mesh['pointCount']} points, {mesh['faceCount']} faces.",
-                  f"Waktu fisik: {result['physicalEndTimeSeconds']} s; {result['physicalStepCount']} langkah tercatat.",'','## Input → Substitusi → Hasil','']
+                  time_summary,'','## Input → Persamaan → Substitusi → Hasil','']
         for e in result['equations']:
             lines += ['### '+e['title'],'','Persamaan:',e['formulaMathMl'],'','Input:',e['inputMathMl'],'',
-                      'Substitusi:',e['substitutionMathMl'],'','Hasil:',e['resultMathMl'],'']
+                      'Substitusi:',e['substitutionMathMl'],'','Hasil:',e['resultMathMl'],'',
+                      'Otoritas: '+e['authority']+'. Sumber: ['+e['source']['title']+']('+e['source']['url']+').','']
         lines += ['## Batas penggunaan','',
                   '- Bukti metadata GitHub berasal dari file API yang disediakan operator; tool offline tidak mengautentikasi ulang GitHub.',
                   '- Pemeriksaan numerik mencakup mesh/field finite, satuan, jumlah elemen, waktu fisik dan lineage checkpoint.',
@@ -561,7 +823,7 @@ def markdown_report(result):
             lines += ['- Cavity memakai RAS kEpsilon, Re 10000, mesh 20×20×1 dan tahap perkembangan awal 0.05 s.',
                       '- Field p cavity mempunyai satuan m²/s² (kinematic pressure); interpretasi sebagai tekanan absolut memerlukan density dan pressure reference yang sesuai.',
                       '- Restart yang tercatat hanya mesh tetap; kesetaraan terhadap uninterrupted run dan physical sliding rotor belum diverifikasi.']
-        else:
+        elif result['profile']=='cavitation-bullet-v1':
             lines += ['- Bullet memakai model liquid–vapour SchnerrSauer. Durasi 10 µs adalah 0.002 kali karakteristik 0.005 s.',
                       '- Revisi mesh castellated-staircase-uniform-v3 memakai snap=false dan addLayers=false, refinement 0/0, serta batas 100000 cells. STL resmi tetap sumber immutable, tetapi permukaan mesh merupakan pendekatan staircase.',
                       '- Background asli 15×15×50 dipertahankan, dengan sekitar lima cells melintasi diameter sumber bullet 0.01 m. Resolusi ini sangat kasar untuk prediksi kuantitatif cavitation.',
@@ -569,6 +831,12 @@ def markdown_report(result):
                       '- Fraksi uap dihitung dari 1−alpha.water tanpa clipping. Run dapat tetap valid sebagai smoke ketika fraksi uap belum berkembang.',
                       '- Snapshot Phi dari initializer potential disimpan terpisah dari phi physical flux agar nama tetap tidak ambigu di Windows. Byte Phi dibandingkan dengan sumber immutable; archive tidak memverifikasi ulang nama pada live native case.',
                       '- p_rgh merupakan hydrostatic-reduced pressure; penilaian vapor pressure membutuhkan rekonstruksi tekanan absolut/datum yang benar.']
+        else:
+            lines += ['- Impeller merupakan passage radial ideal30° dari paket resmi Foundation12,9371 cells dan6171 cells pada zona rotating; belum menjadi exact manufactured Pump atau model volute lengkap.',
+                      '- NCC dipertahankan sebagai24 couples/48 native cyclic patches. NCC tidak disamakan dengan AMI.',
+                      '- Transient memakai60rpm,+x,10×0.001s hingga0.01s dan memeriksa titik rotor terhadap topology aktual. MRF memakai geometri tetap dan50iterasi steady; iterasi bukan detik.',
+                      '- Field p adalah kinematic pressure[m²/s²]. Sumber hanya menetapkan nu=1e-5m²/s; density, vapor pressure dan datum tekanan absolut belum tersedia.',
+                      '- Tidak ada claim head, NPSHr/NPSH3, convergence, pressure sweep atau restart impeller yang diterima dari benchmark singkat ini.']
     else:
         lines += ['## Tindakan yang diperlukan','']+[f"- `{d['reasonCode']}`: {d['correctiveAction']}" for d in result['diagnostics']]
     return '\n'.join(lines)+'\n'

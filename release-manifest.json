@@ -18,7 +18,7 @@
   "impellerSourcePackageBuild": "12-86e126a7bc4d",
   "impellerSourceFixtureFiles": 20,
   "exporterSourcePath": "tools/cfd_worker/export_public.py",
-  "exporterSourceSha256": "30bb474c14fc3eb944a469d58b01ebb476f2c97cc9e2c08f889c5d5c910fa80a",
+  "exporterSourceSha256": "d749f74308ad6741e05d3868a44aecf10241ae377dd19d73169c7322d1d41e00",
   "excluded": [
     "Main application",
     "Lab API",
@@ -73,11 +73,11 @@
     },
     {
       "path": "README.md",
-      "sha256": "af526ea9c20c92619cb51057853b3b26280c6ecb3ce797f0ad90d164c8e95fee",
-      "bytes": 11841,
+      "sha256": "c26e8faff29c93599e1490ac6ef0923ca2c7d9e0c8649a60189e6339afa6ea18",
+      "bytes": 13555,
       "projection": "canonical small public release template",
       "canonicalSourcePath": "deployment/cfd-public/README.md",
-      "canonicalSourceSha256": "8731e35a23378724861b528d4e6dd67f4471d483ff6a7d4bf41881d6bcbbccea"
+      "canonicalSourceSha256": "8ca9d5507a98be823488189bac4a0b622f24c1c21de9767b5c87a1da1ee3cfad"
     },
     {
       "path": "docs/software-release-INSTALL.md",
@@ -665,11 +665,11 @@
     },
     {
       "path": "tools/cfd_worker/verify_educational_run.py",
-      "sha256": "4c3af5970f44210b7b9807a87a159d8862f4a411daf9ad46d8fec9d6da8e7212",
-      "bytes": 54232,
+      "sha256": "f85729bf906dc5091f279587872e85dbe6ea0a203200e7d7e2463993222d33b8",
+      "bytes": 77479,
       "projection": "same bounded educational output tool",
       "canonicalSourcePath": "tools/cfd_worker/verify_educational_run.py",
-      "canonicalSourceSha256": "4c3af5970f44210b7b9807a87a159d8862f4a411daf9ad46d8fec9d6da8e7212"
+      "canonicalSourceSha256": "f85729bf906dc5091f279587872e85dbe6ea0a203200e7d7e2463993222d33b8"
     }
   ]
 }
