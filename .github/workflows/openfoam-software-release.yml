@@ -2,6 +2,12 @@ name: OpenFOAM complete official software release
 
 on:
   workflow_dispatch:
+    inputs:
+      existing_release_id:
+        description: 'Optional observed fixed-tag release ID for explicit recovery; never creates a replacement.'
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -40,6 +46,12 @@ jobs:
       - name: Publish verified draft assets and verify anonymous release downloads
         env:
           GH_TOKEN: ${{ github.token }}
+          RESUME_RELEASE_ID: ${{ inputs.existing_release_id }}
         run: |
           python -B tools/cfd_worker/public_runner_guard.py
-          python -B tools/cfd_worker/software_release.py publish --output "$RUNNER_TEMP/openfoam-software-release"
+          args=()
+          if [[ -n "$RESUME_RELEASE_ID" ]]; then
+            [[ "$RESUME_RELEASE_ID" =~ ^[1-9][0-9]*$ ]] || { echo 'SOFTWARE_RELEASE_ID_INVALID'; exit 2; }
+            args+=(--resume-release-id "$RESUME_RELEASE_ID")
+          fi
+          python -B tools/cfd_worker/software_release.py publish --output "$RUNNER_TEMP/openfoam-software-release" "${args[@]}"

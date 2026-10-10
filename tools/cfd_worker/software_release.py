@@ -12,6 +12,7 @@ import re
 import subprocess
 import tarfile
 import tempfile
+import time
 
 ROOT = Path(__file__).resolve().parents[2]
 REPOSITORY = "simcalc/OpenFoam"
@@ -232,19 +233,63 @@ def verify_prepared(output: Path):
     return expected
 
 
+def validate_release(release):
+    if not isinstance(release, dict) or release.get("tag_name") != TAG:
+        raise ReleaseError("SOFTWARE_RELEASE_TAG_MISMATCH")
+    if type(release.get("id")) is not int or release["id"] <= 0 or type(release.get("draft")) is not bool or not isinstance(release.get("assets"), list):
+        raise ReleaseError("SOFTWARE_RELEASE_RESPONSE_INVALID")
+    return release
+
+
+def read_release(release_id):
+    if type(release_id) is not int or not 0 < release_id < 2**63:
+        raise ReleaseError("SOFTWARE_RELEASE_ID_INVALID")
+    for attempt in range(3):
+        release = gh_json([f"repos/{REPOSITORY}/releases/{release_id}", "--header", "Cache-Control: no-cache"], allow_missing=True)
+        if release is not None:
+            release = validate_release(release)
+            if release["id"] != release_id:
+                raise ReleaseError("SOFTWARE_RELEASE_ID_MISMATCH")
+            return release
+        if attempt < 2:
+            time.sleep(2)
+    # A known release must never be replaced by another draft after a 404.
+    raise ReleaseError("SOFTWARE_RELEASE_KNOWN_ID_UNAVAILABLE")
+
+
 def find_release():
-    release = gh_json([f"repos/{REPOSITORY}/releases/tags/{TAG}"], allow_missing=True)
-    if release is not None:
-        return release
-    # Authenticated release listing also exposes drafts when a tag lookup
-    # does not. No draft may be abandoned/recreated or assets overwritten.
-    candidates = gh_json([f"repos/{REPOSITORY}/releases?per_page=100"])
-    if not isinstance(candidates, list):
-        raise ReleaseError("SOFTWARE_RELEASE_LIST_INVALID")
-    matched = [item for item in candidates if item.get("tag_name") == TAG]
-    if len(matched) > 1:
-        raise ReleaseError("SOFTWARE_RELEASE_TAG_CONFLICT")
-    return matched[0] if matched else None
+    for attempt in range(3):
+        release = gh_json([f"repos/{REPOSITORY}/releases/tags/{TAG}", "--header", "Cache-Control: no-cache"], allow_missing=True)
+        if release is not None:
+            return validate_release(release)
+        # Authenticated release listing can expose drafts before tag lookup.
+        candidates = gh_json([f"repos/{REPOSITORY}/releases?per_page=100", "--header", "Cache-Control: no-cache"])
+        if not isinstance(candidates, list):
+            raise ReleaseError("SOFTWARE_RELEASE_LIST_INVALID")
+        matched = [item for item in candidates if item.get("tag_name") == TAG]
+        if len(matched) > 1:
+            raise ReleaseError("SOFTWARE_RELEASE_TAG_CONFLICT")
+        if matched:
+            return validate_release(matched[0])
+        if attempt < 2:
+            time.sleep(2)
+    return None
+
+
+def create_draft(output, commit):
+    if not re.fullmatch(r"[0-9a-f]{40}", commit):
+        raise ReleaseError("SOFTWARE_RELEASE_COMMIT_REQUIRED")
+    # Use the structured POST response itself. A just-created draft may not
+    # yet be visible through release-by-tag or release-list endpoints.
+    with tempfile.TemporaryDirectory(prefix="release-request-", dir=output) as temporary:
+        request = Path(temporary) / "release.json"
+        write_json(request, {"tag_name": TAG, "target_commitish": commit, "draft": True, "prerelease": False,
+            "name": "OpenFOAM Foundation 12 — complete official package 20250206",
+            "body": (output / "RELEASE-NOTES.md").read_text(encoding="utf-8")})
+        release = validate_release(gh_json(["--method", "POST", f"repos/{REPOSITORY}/releases", "--input", str(request)]))
+    if release["draft"] is not True:
+        raise ReleaseError("SOFTWARE_RELEASE_DRAFT_REQUIRED")
+    return release
 
 
 def verify_asset_bytes(asset: dict, local: Path, target: Path, *, authenticated=False):
@@ -260,21 +305,13 @@ def verify_asset_bytes(asset: dict, local: Path, target: Path, *, authenticated=
         download(url, target, expected_sha=file_sha256(local), expected_bytes=local.stat().st_size)
 
 
-def publish(output: Path):
+def publish(output: Path, *, resume_release_id=None):
     expected = verify_prepared(output)
     if not os.environ.get("GH_TOKEN"):
         raise ReleaseError("SOFTWARE_EPHEMERAL_RELEASE_TOKEN_REQUIRED")
-    release = find_release()
+    release = read_release(resume_release_id) if resume_release_id is not None else find_release()
     if release is None:
-        commit = os.environ.get("GITHUB_SHA", "")
-        if not re.fullmatch(r"[0-9a-f]{40}", commit):
-            raise ReleaseError("SOFTWARE_RELEASE_COMMIT_REQUIRED")
-        command(["gh", "release", "create", TAG, "--repo", REPOSITORY, "--target", commit, "--draft", "--title", "OpenFOAM Foundation 12 — complete official package 20250206", "--notes-file", str(output / "RELEASE-NOTES.md")])
-        release = find_release()
-        if release is None:
-            raise ReleaseError("SOFTWARE_RELEASE_DRAFT_REQUIRED")
-    if release.get("tag_name") != TAG:
-        raise ReleaseError("SOFTWARE_RELEASE_TAG_MISMATCH")
+        release = create_draft(output, os.environ.get("GITHUB_SHA", ""))
     remote_assets = {item["name"]: item for item in release.get("assets", [])}
     if len(remote_assets) != len(release.get("assets", [])) or set(remote_assets) - set(ASSETS):
         raise ReleaseError("SOFTWARE_IMMUTABLE_RELEASE_ASSET_CONFLICT")
@@ -285,14 +322,16 @@ def publish(output: Path):
                 if release.get("draft") is not True:
                     raise ReleaseError("SOFTWARE_PUBLISHED_RELEASE_INCOMPLETE")
                 command(["gh", "release", "upload", TAG, str(output / name), "--repo", REPOSITORY], timeout=300)
-        release = gh_json([f"repos/{REPOSITORY}/releases/{int(release['id'])}"])
+        release = read_release(release["id"])
         remote_assets = {item["name"]: item for item in release.get("assets", [])}
         if set(remote_assets) != set(ASSETS):
             raise ReleaseError("SOFTWARE_RELEASE_ASSET_MANIFEST_INCOMPLETE")
         for name in ASSETS:
             verify_asset_bytes(remote_assets[name], output / name, directory / name, authenticated=release.get("draft") is True)
         if release.get("draft") is True:
-            release = gh_json(["--method", "PATCH", f"repos/{REPOSITORY}/releases/{int(release['id'])}", "--field", "draft=false"])
+            release = validate_release(gh_json(["--method", "PATCH", f"repos/{REPOSITORY}/releases/{int(release['id'])}", "--field", "draft=false"]))
+            if release["draft"] is not False:
+                raise ReleaseError("SOFTWARE_RELEASE_PUBLICATION_REQUIRED")
         # Anonymous HTTPS downloads after publication prove public availability;
         # curl has no auth header or inherited GitHub token mechanism here.
         for name in ASSETS:
@@ -310,10 +349,13 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("prepare", "publish"))
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--resume-release-id", type=int, help="Resume an existing fixed-tag release by its observed GitHub ID; never create a replacement.")
     args = parser.parse_args(argv)
     try:
         validate_public_context()
-        result = prepare(args.output.resolve()) if args.mode == "prepare" else publish(args.output.resolve())
+        if args.mode == "prepare" and args.resume_release_id is not None:
+            raise ReleaseError("SOFTWARE_RESUME_PUBLISH_ONLY")
+        result = prepare(args.output.resolve()) if args.mode == "prepare" else publish(args.output.resolve(), resume_release_id=args.resume_release_id)
     except (ReleaseError, OSError, ValueError, KeyError, subprocess.TimeoutExpired) as exc:
         print(json.dumps({"status": "SoftwareReleaseStopped", "reasonCode": str(exc) if isinstance(exc, ReleaseError) else "SOFTWARE_RELEASE_INPUT_OR_RUNTIME_REQUIRED",
                           "action": "Inspect the pinned package identity, complete source inventory and fixed public release assets; no partial release is accepted.", "publicReleaseVerified": False}))

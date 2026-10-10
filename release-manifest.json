@@ -9,7 +9,7 @@
   "licenseAndProvenanceFiles": 2,
   "officialFixtureFiles": 31,
   "exporterSourcePath": "tools/cfd_worker/export_public.py",
-  "exporterSourceSha256": "b83927521b400f38e23b9f9ae4cbd502867c2117c6161c896438cac073b5a901",
+  "exporterSourceSha256": "e895a4530436c4347123518e921a183413a0f4ccd638b5cb7fd77a8f18e95b2a",
   "excluded": [
     "Main application",
     "Lab API",
@@ -24,24 +24,24 @@
   "files": [
     {
       "path": ".github/workflows/cavitation-cfd-validation.yml",
-      "sha256": "100731cdc8c19535007e9a73fc58930071d24d1bf46e8f8e4cad6fff2353c906",
-      "bytes": 5213,
+      "sha256": "af13baf7fd1a73ba1aacd6936136200c556f8b0024bb2db0e4bbc4f4f5fdba2a",
+      "bytes": 5260,
       "projection": "latest canonical manual workflow; public-only pre-allocation gate",
       "canonicalSourcePath": ".github/workflows/cavitation-cfd-validation.yml",
       "canonicalSourceSha256": "e2f5c4ce91495be770fa4c0c9c3ae258d0b2534fb6f27e90e81f575f7c250a4a"
     },
     {
       "path": ".github/workflows/openfoam-software-release.yml",
-      "sha256": "238d3b4a4751bde9c8122f4c37b2cf075745c37f79c5cb08e824d3ee90a508ad",
-      "bytes": 1733,
+      "sha256": "f5a1c8f03e1396fb274e1ab28cb846b37d49d8123505051e88de2ead7f631fad",
+      "bytes": 2275,
       "projection": "same fixed PUBLIC-only software release workflow; no private checkout/history/token",
       "canonicalSourcePath": ".github/workflows/openfoam-software-release.yml",
-      "canonicalSourceSha256": "238d3b4a4751bde9c8122f4c37b2cf075745c37f79c5cb08e824d3ee90a508ad"
+      "canonicalSourceSha256": "f5a1c8f03e1396fb274e1ab28cb846b37d49d8123505051e88de2ead7f631fad"
     },
     {
       "path": ".github/workflows/transient-cfd-validation.yml",
-      "sha256": "61ad4f8868bf6077465df6c002711bb76fa8854121fd5014c95f9a806a958ef8",
-      "bytes": 5223,
+      "sha256": "695baf388788af8fbce7361b8fefba068f89ea80ee5b61eab9b6b813ba1858d9",
+      "bytes": 5270,
       "projection": "latest canonical manual workflow; public-only pre-allocation gate",
       "canonicalSourcePath": ".github/workflows/transient-cfd-validation.yml",
       "canonicalSourceSha256": "84436b82f81f19646afbbb8c6b6a5d3bb0d55649884c3df0df32b0b0879f8c6c"
@@ -152,11 +152,11 @@
     },
     {
       "path": "tests/test_software_release.py",
-      "sha256": "9dc8bbe6fe7671e81caa7ae4fbd2a1e0949d347b9e67ba78c44b8c5535dfd0ad",
-      "bytes": 7968,
+      "sha256": "f7406e93ad67663cc53eb10af867a7323a01c37359f4a23b48f99409111f21e7",
+      "bytes": 10966,
       "projection": "same offline software release contracts; no live publication claim",
       "canonicalSourcePath": "tests/cfd_worker/test_software_release.py",
-      "canonicalSourceSha256": "9dc8bbe6fe7671e81caa7ae4fbd2a1e0949d347b9e67ba78c44b8c5535dfd0ad"
+      "canonicalSourceSha256": "f7406e93ad67663cc53eb10af867a7323a01c37359f4a23b48f99409111f21e7"
     },
     {
       "path": "tools/cfd_worker/fixtures/openfoam12/COPYING",
@@ -448,11 +448,11 @@
     },
     {
       "path": "tools/cfd_worker/software_release.py",
-      "sha256": "c006fadc90dfd82a7d551d366fcb4ebffe71a985e1556b4946288c82661a53e8",
-      "bytes": 20224,
+      "sha256": "ceea9cdc116d7471da1b3f1d97298077c8b94cf43617cd8692b1137fea193cb1",
+      "bytes": 22480,
       "projection": "same fixed official software package verification/inventory tool; no application data",
       "canonicalSourcePath": "tools/cfd_worker/software_release.py",
-      "canonicalSourceSha256": "c006fadc90dfd82a7d551d366fcb4ebffe71a985e1556b4946288c82661a53e8"
+      "canonicalSourceSha256": "ceea9cdc116d7471da1b3f1d97298077c8b94cf43617cd8692b1137fea193cb1"
     },
     {
       "path": "tools/cfd_worker/verify_educational_run.py",

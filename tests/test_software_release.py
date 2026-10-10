@@ -2,6 +2,7 @@
 from hashlib import sha256
 import importlib.util
 from io import BytesIO
+import json
 import os
 from pathlib import Path
 import tarfile
@@ -106,7 +107,40 @@ class SoftwareReleaseTests(unittest.TestCase):
             self.assertEqual(release.find_release(), draft)
         with patch.object(release, "gh_json", side_effect=[None, [draft, draft]]), self.assertRaises(release.ReleaseError):
             release.find_release()
+        with patch.object(release, "gh_json", side_effect=[None, [], None, [draft]]) as api, patch.object(release.time, "sleep") as delay:
+            self.assertEqual(release.find_release(), draft)
+            self.assertEqual(api.call_count, 4)
+            delay.assert_called_once_with(2)
+            self.assertTrue(all("Cache-Control: no-cache" in call.args[0] for call in api.call_args_list))
+        with patch.object(release, "gh_json", side_effect=[None, draft]), patch.object(release.time, "sleep") as delay:
+            self.assertEqual(release.read_release(1), draft)
+            delay.assert_called_once_with(2)
+        with patch.object(release, "verify_prepared", return_value={}), patch.dict(os.environ, {"GH_TOKEN": "TRANSPORT_ONLY"}), patch.object(release, "gh_json", return_value=None) as api, patch.object(release.time, "sleep"), patch.object(release, "create_draft") as create, patch.object(release, "find_release") as find, self.assertRaisesRegex(release.ReleaseError, "SOFTWARE_RELEASE_KNOWN_ID_UNAVAILABLE"):
+            release.publish(ROOT, resume_release_id=408858191)
+        self.assertEqual(api.call_count, 3)
+        create.assert_not_called()
+        find.assert_not_called()
+        for identifier in (0, -1, True, "1", 2**63):
+            with self.subTest(identifier=identifier), patch.object(release, "gh_json") as api, self.assertRaises(release.ReleaseError):
+                release.read_release(identifier)
+            api.assert_not_called()
+        with patch.object(release, "gh_json", return_value=dict(draft, tag_name="different")), self.assertRaises(release.ReleaseError):
+            release.read_release(1)
         with tempfile.TemporaryDirectory(dir=TEST_TMP) as directory:
+            output = Path(directory)
+            (output / "RELEASE-NOTES.md").write_text("DECLARED TRANSPORT CONTRACT ONLY", encoding="utf-8")
+            def post_response(argv):
+                self.assertEqual(argv[:3], ["--method", "POST", f"repos/{release.REPOSITORY}/releases"])
+                request = json.loads(Path(argv[argv.index("--input") + 1]).read_text(encoding="utf-8"))
+                self.assertEqual(request["target_commitish"], "a" * 40)
+                self.assertEqual(request["tag_name"], release.TAG)
+                self.assertIs(request["draft"], True)
+                return draft
+            with patch.object(release, "gh_json", side_effect=post_response) as api, patch.object(release, "find_release") as find, patch.object(release, "command") as command:
+                self.assertEqual(release.create_draft(output, "a" * 40), draft)
+                self.assertEqual(api.call_count, 1)
+            find.assert_not_called()
+            command.assert_not_called()
             local, target = Path(directory) / release.PACKAGE_NAME, Path(directory) / "verified.deb"
             local.write_bytes(b"TRANSPORT ONLY")
             with patch.object(release, "download") as download:
@@ -115,6 +149,10 @@ class SoftwareReleaseTests(unittest.TestCase):
             self.assertEqual(download.call_args.kwargs["expected_sha"], release.file_sha256(local))
             with self.assertRaises(release.ReleaseError):
                 release.verify_asset_bytes({"size": 0, "state": "uploaded"}, local, target)
+        workflow = (ROOT / ".github/workflows/openfoam-software-release.yml").read_text(encoding="utf-8")
+        self.assertIn("existing_release_id:", workflow)
+        self.assertIn("RESUME_RELEASE_ID: ${{ inputs.existing_release_id }}", workflow)
+        self.assertIn('args+=(--resume-release-id "$RESUME_RELEASE_ID")', workflow)
 
 
 if __name__ == "__main__":
