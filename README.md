@@ -26,13 +26,13 @@ Real OpenFOAM mesh/solver execution is claimed only after actual stage exit/log/
 
 Native export includes exact initial state, mesh, settings, paired finite time fields, solver logs and checksum-bound v2 checkpoint descriptors. The generated `reference/snapshot.json` contains only the fixed OpenFOAM tutorial profile/source commit, never Main/student data. Checksums prove integrity, not source authenticity. Outputs remain Imported Evidence and cannot make Main Current.
 
-Python educational verification reports equations in Input â†’ Substitution â†’ Result stages from native operands. This repository does not perform application engineering calculations or alter Main.
+Python educational verification reports equations in Input -> Substitution -> Result stages from native operands. This repository does not perform application engineering calculations or alter Main.
 
 ## Source and licensing
 
-The 31 official resources are unchanged and pinned in `tools/cfd_worker/fixtures/openfoam12/provenance.json`: OpenFOAM-12 source commit `0b487fc98b88d3e8dc3c3ead4662e7632dd5e7dd`. Their GPL-3.0-or-later notice and COPYING are retained. See https://github.com/OpenFOAM/OpenFOAM-12 and https://openfoam.org/licence/ . Orchestration source is a reviewed subset/projection of the private canonical system; release-manifest.json records relative source/export hashes without publishing private Git history or runtime data. The export is not a live mirror. Project-authored orchestration licensing is not silently reassigned by this export.
+The 29 official tutorial files are unchanged; retained COPYING and project-authored provenance.json make 31 trace resources and pinned in `tools/cfd_worker/fixtures/openfoam12/provenance.json`: OpenFOAM-12 source commit `0b487fc98b88d3e8dc3c3ead4662e7632dd5e7dd`. Their GPL-3.0-or-later notice and COPYING are retained. See https://github.com/OpenFOAM/OpenFOAM-12 and https://openfoam.org/licence/ . Orchestration source is a reviewed subset/projection of the private canonical system; release-manifest.json records relative source/export hashes without publishing private Git history or runtime data. The export is not a live mirror. Project-authored orchestration licensing is not silently reassigned by this export.
 
-This candidate has no actual local OpenFOAM acceptance claim. Verify successful public workflow/native output evidence after publication; retain the exact release commit and run IDs with results.
+This export records preparation state, not live publication or solver acceptance. Actual local OpenFOAM acceptance is not claimed. Verify successful public workflow/native output evidence separately, retaining the exact source commit and run IDs with results.
 
 ## Measured disposable Ubuntu 24.04 installation footprint
 

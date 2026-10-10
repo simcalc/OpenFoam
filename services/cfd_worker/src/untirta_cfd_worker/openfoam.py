@@ -32,6 +32,20 @@ def save_initial_state(job: Job, workspace: Path, case: Path) -> None:
     for path in paths:
         shutil.copyfile(path, destination / path.name)
 
+def _logged_seconds(line: str, label: str) -> float | None:
+    """Foundation 12 logs SI seconds bare or with `s`; no other units convert."""
+    prefix = '\\s*' + re.escape(label) + '\\s*=\\s*'
+    if not re.match(prefix, line):
+        return None
+    number = '([+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?)'
+    matched = re.fullmatch(prefix + number + '\\s*(?:s)?\\s*', line)
+    if not matched:
+        raise WorkerDiagnostic('CFD_NATIVE_TIME_TOKEN_INVALID', "Use a finite SI-second log value with an optional exact 's' suffix; unknown units and trailing tokens are rejected, not converted.")
+    value = float(matched[1])
+    if not math.isfinite(value):
+        raise WorkerDiagnostic('CFD_NATIVE_TIME_TOKEN_INVALID', 'Native logged physical time must be finite SI seconds.')
+    return value
+
 def _time_states(solver_log: str, case: Path, profile: str, step_offset=0) -> list[dict]:
     fixed = None
     if profile == 'transient-cavity-v1':
@@ -40,14 +54,17 @@ def _time_states(solver_log: str, case: Path, profile: str, step_offset=0) -> li
             fixed = float(entry[0])
     current_dt, samples = (fixed, [])
     for line in solver_log.splitlines():
-        dt_match = re.fullmatch('\\s*deltaT\\s*=\\s*([0-9.eE+-]+)\\s*', line)
-        time_match = re.fullmatch('\\s*Time\\s*=\\s*([0-9.eE+-]+)\\s*', line)
-        if dt_match:
-            current_dt = float(dt_match[1])
-        if time_match:
-            value = float(time_match[1])
+        dt_value = _logged_seconds(line, 'deltaT')
+        value = _logged_seconds(line, 'Time')
+        if dt_value is not None:
+            if dt_value <= 0:
+                raise WorkerDiagnostic('CFD_NATIVE_TIME_STEP_REQUIRED', 'The actual logged physical time step must be positive SI seconds.')
+            current_dt = dt_value
+        if value is not None:
             if current_dt is None or not math.isfinite(current_dt) or current_dt <= 0 or (not math.isfinite(value)) or (value <= 0):
                 raise WorkerDiagnostic('CFD_NATIVE_TIME_STEP_REQUIRED', 'Use actual positive logged adaptive time steps or the pinned fixed time step; do not infer adaptive dt from output interval.')
+            if samples and value <= samples[-1]['physicalTimeSeconds']:
+                raise WorkerDiagnostic('CFD_NATIVE_TIME_SEQUENCE_INVALID', 'Each actual physical step must advance strictly beyond the previous logged time.')
             samples.append({'interpretation': 'physical', 'physicalTimeSeconds': value, 'timeStepSeconds': current_dt, 'step': step_offset + len(samples) + 1, 'iteration': None})
     return samples
 
@@ -78,9 +95,16 @@ def prepare_restart(job: Job, workspace: Path, case: Path) -> tuple[Path, dict]:
 
 def verify_restart_log(workspace: Path, start_time: float, end_time: float):
     text = (workspace / 'output/logs/restart-foamRun.log').read_text(errors='replace')
-    created = re.search('Create mesh for time\\s*=\\s*([0-9.eE+-]+)', text)
-    times = [float(value) for value in re.findall('(?m)^Time\\s*=\\s*([0-9.eE+-]+)', text)]
-    if not created or not math.isclose(float(created[1]), start_time, abs_tol=1e-12) or (not times) or (min(times) <= start_time) or (not math.isclose(times[-1], end_time, abs_tol=1e-12)):
+    created, times = ([], [])
+    for line in text.splitlines():
+        mesh_time = _logged_seconds(line, 'Create mesh for time')
+        step_time = _logged_seconds(line, 'Time')
+        _logged_seconds(line, 'deltaT')
+        if mesh_time is not None:
+            created.append(mesh_time)
+        if step_time is not None:
+            times.append(step_time)
+    if len(created) != 1 or not math.isclose(created[0], start_time, abs_tol=1e-12) or (not times) or (min(times) <= start_time) or any((b <= a for a, b in zip(times, times[1:]))) or (not math.isclose(times[-1], end_time, abs_tol=1e-12)):
         raise WorkerDiagnostic('CFD_NATIVE_RESTART_UNVERIFIED', 'The actual solver must log loading the exact 0.05 s mesh/state and advancing beyond it to 0.055 s.')
 
 def replace_entry(path: Path, name: str, value: str) -> None:

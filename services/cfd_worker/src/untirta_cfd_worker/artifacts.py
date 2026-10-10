@@ -137,7 +137,7 @@ def _role_path(path: str, role: str, limits: ArtifactLimits, raw: bytes) -> None
 
 def _input_only(value) -> None:
     prohibited = {'results', 'output', 'outputs', 'checkpoints', 'equationStages', 'currentResult', 'actualCfdRunVerified', 'password', 'secret', 'accessToken', 'refreshToken', 'serviceRoleKey', 'apiKey', 'authorization', 'cookie'}
-    if not isinstance(value, dict) or value.get('schemaVersion') not in ('untirta.cfd-worker-job.v1', 'untirta.cfd-pump-study-input.v1'):
+    if not isinstance(value, dict) or value.get('schemaVersion') not in ('untirta.cfd-worker-job.v1',):
         fail('CFD_ARTIFACT_INPUT_SCHEMA_INVALID', 'Include an independent input-only CFD job/study document.')
 
     def walk(item, depth=0):

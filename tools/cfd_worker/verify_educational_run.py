@@ -71,10 +71,13 @@ def github_association(metadata, profile):
     if matching[0].get('head_sha',run['head_sha']) != run['head_sha']:
         reject('CFD_GITHUB_JOB_EVIDENCE_REQUIRED', 'Match the actual numerical job to the same immutable workflow head SHA.')
     steps = matching[0].get('steps')
-    required = ['Install checksum-pinned OpenFOAM Foundation 12',PROFILES[profile]['solverStep'],
-                'Verify FREE storage again and prepare bounded output evidence']
+    required = ['Install checksum-pinned OpenFOAM Foundation 12',PROFILES[profile]['solverStep']]
+    preparation_names={'Verify FREE storage again and prepare bounded output evidence',
+                       'Verify public runner again and prepare bounded output evidence'}
     if not isinstance(steps,list) or len(steps) > 64 or any(not any(isinstance(s,dict) and s.get('name') == name and s.get('status') == 'completed' and s.get('conclusion') == 'success' for s in steps) for name in required):
         reject('CFD_GITHUB_SOLVER_STEP_REQUIRED', 'Verify successful installer, actual solver and artifact-preparation steps; passing contract tests alone is insufficient.')
+    if not any(isinstance(s,dict) and s.get('name') in preparation_names and s.get('status')=='completed' and s.get('conclusion')=='success' for s in steps):
+        reject('CFD_GITHUB_SOLVER_STEP_REQUIRED', 'Verify one completed successful preparation step for this private-allowance or public-runner workflow; a step label does not independently establish storage allowance.')
     outer = metadata.get('outerArchiveSha256')
     if outer is not None:
         if not isinstance(outer,str) or not re.fullmatch(r'[0-9a-f]{64}',outer) or artifact.get('digest') != 'sha256:'+outer:
@@ -85,6 +88,7 @@ def github_association(metadata, profile):
             'sourceApiUrls':{'run':f'https://api.github.com/repos/{repo}/actions/runs/{run["id"]}',
                 'jobs':f'https://api.github.com/repos/{repo}/actions/runs/{run["id"]}/jobs',
                 'artifact':f'https://api.github.com/repos/{repo}/actions/artifacts/{artifact["id"]}'},
+            'accountStorageAllowanceVerified':False,
             'authenticityVerified':False,'source': 'Operator-supplied GitHub REST API metadata; offline authenticity not independently established.'}
 
 
@@ -215,15 +219,37 @@ def profile_source_evidence(files,prefix,profile):
     return {'sourceCommit':PIN,'checkedSettings':checked,'geometryIsEducationalTutorial':True,'mesherExecutionAuthenticityVerified':False}
 
 
+def logged_seconds(line,key):
+    """Foundation 12 prints physical Time as e.g. `Time = 0.005s`.
+
+    Bare numbers are seconds in these pinned profiles. Only the explicit SI
+    seconds suffix is accepted; unknown units must never be silently ignored
+    or parsed as a numeric prefix (0.005ms is a different physical time).
+    """
+    if not re.match(r'^\s*'+re.escape(key)+r'\s*=',line): return None
+    match=re.fullmatch(r'\s*'+re.escape(key)+r'\s*=\s*('+NUM+r')\s*(?:s\s*)?',line)
+    if not match:
+        reject('CFD_EDUCATIONAL_LOG_TIME_UNIT_INVALID','Accept only a complete finite physical time/dt in SI seconds, with optional Foundation 12 s suffix; ms or unknown/malformed units require explicit conversion upstream.')
+    value=float(match[1])
+    if not math.isfinite(value): reject('CFD_EDUCATIONAL_LOG_TIME_UNIT_INVALID','Physical log time/dt must be finite SI seconds.')
+    return value
+
+
+def logged_mesh_time(log):
+    values=[value for line in log.splitlines() if (value:=logged_seconds(line,'Create mesh for time')) is not None]
+    if len(values)!=1:
+        reject('CFD_EDUCATIONAL_LOG_TIME_MISMATCH','Require exactly one anchored solver mesh-loading time in SI seconds for each separate solve log.')
+    return values[0]
+
+
 def logged_time_states(log,profile,control,*,initial_time=0,step_offset=0):
     dt=_entry(control,'deltaT') if profile=='transient-cavity-v1' else None
     previous=initial_time; states=[]
     for line in log.splitlines():
-        delta=re.fullmatch(r'\s*deltaT\s*=\s*('+NUM+r')\s*',line)
-        time=re.fullmatch(r'\s*Time\s*=\s*('+NUM+r')\s*',line)
-        if delta: dt=float(delta[1])
-        if not time: continue
-        value=float(time[1])
+        delta=logged_seconds(line,'deltaT')
+        value=logged_seconds(line,'Time')
+        if delta is not None: dt=delta
+        if value is None: continue
         if dt is None or not math.isfinite(dt) or dt<=0 or not math.isfinite(value) or value<=previous or not math.isclose(value-previous,dt,rel_tol=1e-4,abs_tol=1e-12):
             reject('CFD_EDUCATIONAL_TIME_STEP_MISMATCH','Associate every physical step with an actual positive logged adaptive dt or exact fixed control dt and advancing time; allow only log-printing precision tolerance 1e-4.')
         states.append({'physicalTimeSeconds':value,'timeStepSeconds':dt,'step':step_offset+len(states)+1})
@@ -359,11 +385,11 @@ def verify_educational_run(raw, sidecar, metadata, *, sidecar_bytes=None):
             reject('CFD_EDUCATIONAL_MESH_PROFILE_MISMATCH','The unchanged 20×20×1 cavity must produce 400 native cells.')
         log=files.get('output/logs/foamRun.log',b'').decode('utf-8',errors='replace')
         meshlog=files.get('output/logs/checkMesh.log',b'').decode('utf-8',errors='replace')
-        created=re.search(r'Create mesh for time\s*=\s*('+NUM+r')',log)
-        times=[float(v) for v in re.findall(r'(?m)^Time\s*=\s*('+NUM+r')',log)]
-        if 'Mesh OK.' not in meshlog or not re.search(r'(?m)^End\s*$',log) or not created or float(created[1])!=0 or not times or any(not math.isfinite(t) for t in times) or any(a>=b for a,b in zip(times,times[1:])) or not math.isclose(times[-1],PROFILES[profile]['time'],rel_tol=1e-6,abs_tol=1e-12):
-            reject('CFD_EDUCATIONAL_LOG_TIME_MISMATCH','Verify the actual solver loads physical time zero and advances strictly to the intended profile end, with Mesh OK and End logs.')
+        created=logged_mesh_time(log)
         time_states=logged_time_states(log,profile,files[prefix+'/system/controlDict'])
+        times=[state['physicalTimeSeconds'] for state in time_states]
+        if 'Mesh OK.' not in meshlog or not re.search(r'(?m)^End\s*$',log) or created!=0 or not times or not math.isclose(times[-1],PROFILES[profile]['time'],rel_tol=1e-6,abs_tol=1e-12):
+            reject('CFD_EDUCATIONAL_LOG_TIME_MISMATCH','Verify the actual solver loads physical time zero and advances strictly to the intended profile end, with Mesh OK and End logs.')
         original=[cp for cp in inspected['checkpoints'] if all(item['path'].startswith(prefix+'/') for item in strict_json(files[cp['path']])['nativeFiles'])]
         final=max(original,key=lambda cp:cp['timeState']['physicalTimeSeconds']) if original else None
         if final is None or final['timeState']['step']!=len(times) or not math.isclose(final['timeState']['physicalTimeSeconds'],times[-1],rel_tol=1e-6,abs_tol=1e-12):
@@ -383,8 +409,9 @@ def verify_educational_run(raw, sidecar, metadata, *, sidecar_bytes=None):
             source=[item for item in inspected['checkpoints'] if item['timeState']['physicalTimeSeconds']==0.05]
             target=[item for item in inspected['checkpoints'] if item['timeState']['physicalTimeSeconds']==0.055]
             restartlog=files.get('output/logs/restart-foamRun.log',b'').decode(errors='replace')
-            start=re.search(r'Create mesh for time\s*=\s*('+NUM+r')',restartlog)
-            if not isinstance(restart,dict) or profile!='transient-cavity-v1' or len(source)!=1 or len(target)!=1 or not start or float(start[1])!=0.05 or not re.search(r'(?m)^Time\s*=\s*0\.055\s*$',restartlog) or not re.search(r'(?m)^End\s*$',restartlog) or restart.get('actualRestartExecutionCompleted') is not True or not any(s.get('name')=='restart-foamRun' and s.get('exitCode')==0 for s in stages if isinstance(s,dict)):
+            start=logged_mesh_time(restartlog)
+            restart_states=logged_time_states(restartlog,profile,files['output/native-restart-case/system/controlDict'],initial_time=0.05,step_offset=10)
+            if not isinstance(restart,dict) or profile!='transient-cavity-v1' or len(source)!=1 or len(target)!=1 or start!=0.05 or len(restart_states)!=1 or not math.isclose(restart_states[-1]['physicalTimeSeconds'],0.055,abs_tol=1e-12) or not re.search(r'(?m)^End\s*$',restartlog) or restart.get('actualRestartExecutionCompleted') is not True or not any(s.get('name')=='restart-foamRun' and s.get('exitCode')==0 for s in stages if isinstance(s,dict)):
                 reject('CFD_EDUCATIONAL_RESTART_EVIDENCE_MISMATCH','Pair the exact 0.05 s source with the continued 0.055 s native restart and actual loading/advance log.')
             source_native=strict_json(files[source[0]['path']]); target_native=strict_json(files[target[0]['path']])
             mesh_identity=lambda c:{i['path'].split('/constant/polyMesh/',1)[1]:(i['sha256'],i['bytes']) for i in c['meshFiles']}
@@ -410,8 +437,6 @@ def verify_educational_run(raw, sidecar, metadata, *, sidecar_bytes=None):
                 descriptor=next((i for i in restart.get('sourceNativeFiles',[]) if isinstance(i,dict) and i.get('path')==source_path),None)
                 if descriptor is None or descriptor.get('sha256')!=sha256(files[source_path]).hexdigest() or descriptor.get('bytes')!=len(files[source_path]):
                     reject('CFD_EDUCATIONAL_RESTART_EVIDENCE_MISMATCH','Bind restart source fields to the exact original saved native pair.')
-            restart_states=logged_time_states(restartlog,profile,files['output/native-restart-case/system/controlDict'],initial_time=0.05,step_offset=10)
-            if len(restart_states)!=1: reject('CFD_EDUCATIONAL_RESTART_EVIDENCE_MISMATCH','The approved continuation consists of exactly one physical step beyond 0.05 s.')
             checkpoint_fields(target_native,files,mesh,definitions,restart_states[0])
             for state,key in [(source[0],'sourceCheckpointChecksum'),(target[0],'restartCheckpointChecksum')]:
                 native=strict_json(files[state['path']])

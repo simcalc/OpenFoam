@@ -3,9 +3,13 @@
   "repository": "simcalc/OpenFoam",
   "canonicalSource": "private system repository; no live mirror or private history publication",
   "scope": "fixed OpenFOAM educational benchmarks only",
-  "published": true,
+  "publicationState": "export-prepared",
   "actualLocalCfdRun": false,
+  "officialTutorialFiles": 29,
+  "licenseAndProvenanceFiles": 2,
   "officialFixtureFiles": 31,
+  "exporterSourcePath": "tools/cfd_worker/export_public.py",
+  "exporterSourceSha256": "9cc326898334a4cff53e619329f4c76569f5d16557db78fac55dbd46735f4db6",
   "excluded": [
     "Main application",
     "Lab API",
@@ -14,118 +18,135 @@
     "Pump contract fixtures",
     "database/schema/migrations",
     "student inputs/snapshots",
-    "private repository credentials"
+    "private repository credentials",
+    "private Git history"
   ],
   "files": [
     {
-      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/U",
-      "sha256": "fb01f525e4200e910cf986dc34538f203ce5e35152b4cc5d4bd7d8b034c524b6",
-      "bytes": 953,
-      "projection": "byte-identical pinned official OpenFOAM resource",
-      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/U",
-      "canonicalSourceSha256": "fb01f525e4200e910cf986dc34538f203ce5e35152b4cc5d4bd7d8b034c524b6"
+      "path": ".github/workflows/cavitation-cfd-validation.yml",
+      "sha256": "100731cdc8c19535007e9a73fc58930071d24d1bf46e8f8e4cad6fff2353c906",
+      "bytes": 5213,
+      "projection": "latest canonical manual workflow; public-only pre-allocation gate",
+      "canonicalSourcePath": ".github/workflows/cavitation-cfd-validation.yml",
+      "canonicalSourceSha256": "e2f5c4ce91495be770fa4c0c9c3ae258d0b2534fb6f27e90e81f575f7c250a4a"
     },
     {
-      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/epsilon",
-      "sha256": "78f51b7f918fb1a73572598033a90ad9c49ba1e4ac6bcb5112c23daf73070078",
-      "bytes": 1042,
-      "projection": "byte-identical pinned official OpenFOAM resource",
-      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/epsilon",
-      "canonicalSourceSha256": "78f51b7f918fb1a73572598033a90ad9c49ba1e4ac6bcb5112c23daf73070078"
+      "path": ".github/workflows/transient-cfd-validation.yml",
+      "sha256": "61ad4f8868bf6077465df6c002711bb76fa8854121fd5014c95f9a806a958ef8",
+      "bytes": 5223,
+      "projection": "latest canonical manual workflow; public-only pre-allocation gate",
+      "canonicalSourcePath": ".github/workflows/transient-cfd-validation.yml",
+      "canonicalSourceSha256": "84436b82f81f19646afbbb8c6b6a5d3bb0d55649884c3df0df32b0b0879f8c6c"
     },
     {
-      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/k",
-      "sha256": "d8c1744aa21734e074bb28c9921319916d2f595282e5b2369cbc42599b692e8f",
-      "bytes": 1028,
-      "projection": "byte-identical pinned official OpenFOAM resource",
-      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/k",
-      "canonicalSourceSha256": "d8c1744aa21734e074bb28c9921319916d2f595282e5b2369cbc42599b692e8f"
+      "path": ".gitignore",
+      "sha256": "2fc4c40e985ecec32147d45fc0d3b1f496e4cd616ab1fca670fa87bfcdb5b44e",
+      "bytes": 38,
+      "projection": "canonical small public release template",
+      "canonicalSourcePath": "deployment/cfd-public/.gitignore",
+      "canonicalSourceSha256": "2fc4c40e985ecec32147d45fc0d3b1f496e4cd616ab1fca670fa87bfcdb5b44e"
     },
     {
-      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/nuTilda",
-      "sha256": "ca2b4737e537a2aaa6c8692c2a1b84adfdc727b5188c61a4017bb12dbb73c160",
-      "bytes": 920,
-      "projection": "byte-identical pinned official OpenFOAM resource",
-      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/nuTilda",
-      "canonicalSourceSha256": "ca2b4737e537a2aaa6c8692c2a1b84adfdc727b5188c61a4017bb12dbb73c160"
+      "path": "README.md",
+      "sha256": "1e3aa0dbef6ddc888473b45ba416dd5d6ab477aa5b86541f64af7d3ea6f89167",
+      "bytes": 4947,
+      "projection": "canonical small public release template",
+      "canonicalSourcePath": "deployment/cfd-public/README.md",
+      "canonicalSourceSha256": "ad3e16457da8efd57c2f6195592519759d7c6b51270bc8b9ae260b6b1b93ca93"
     },
     {
-      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/nut",
-      "sha256": "bc2cb1a49149ab10a5fc95622a03096cd96d81d82c28193411f0fa65d7ab2799",
-      "bytes": 1014,
-      "projection": "byte-identical pinned official OpenFOAM resource",
-      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/nut",
-      "canonicalSourceSha256": "bc2cb1a49149ab10a5fc95622a03096cd96d81d82c28193411f0fa65d7ab2799"
+      "path": "services/cfd_worker/src/untirta_cfd_worker/__init__.py",
+      "sha256": "daea4de14d0bf7538cc3f3ea6bf4dc6e3c4a62f2efa0e4d1e990519c680ff6ad",
+      "bytes": 153,
+      "projection": "same minimal capability export",
+      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/__init__.py",
+      "canonicalSourceSha256": "daea4de14d0bf7538cc3f3ea6bf4dc6e3c4a62f2efa0e4d1e990519c680ff6ad"
     },
     {
-      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/omega",
-      "sha256": "d291ee4de27dcd75dcd98bac7d891c946daf369be8489abd2eb5a74787d3cfff",
-      "bytes": 1027,
-      "projection": "byte-identical pinned official OpenFOAM resource",
-      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/omega",
-      "canonicalSourceSha256": "d291ee4de27dcd75dcd98bac7d891c946daf369be8489abd2eb5a74787d3cfff"
+      "path": "services/cfd_worker/src/untirta_cfd_worker/artifacts.py",
+      "sha256": "d61f8a5b4913714c0911d3459b3dc7c948bec429670f054f4e7033b3f2c44c08",
+      "bytes": 24634,
+      "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
+      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/artifacts.py",
+      "canonicalSourceSha256": "cf609731ff62022307d66cd56dc7b3e2b19fa108904fbf811aacdd3c3c6143e6"
     },
     {
-      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/p",
-      "sha256": "d4bacc4f904d3483b70892a0869f9bf8c1a8c185a0915ad68f597ba3d887d688",
-      "bytes": 914,
-      "projection": "byte-identical pinned official OpenFOAM resource",
-      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/p",
-      "canonicalSourceSha256": "d4bacc4f904d3483b70892a0869f9bf8c1a8c185a0915ad68f597ba3d887d688"
+      "path": "services/cfd_worker/src/untirta_cfd_worker/capabilities.py",
+      "sha256": "3fbbf629fd2606c4dce832f7ce7f44e552779e141539dda7bc07fd4a502b5bea",
+      "bytes": 2542,
+      "projection": "Linux/OpenFOAM-only authoritative capability projection",
+      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/capabilities.py",
+      "canonicalSourceSha256": "e8a71ba8fbe302d2db959173da5c8559656f28277a4e29140f7e8d8971f60287"
     },
     {
-      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/constant/momentumTransport",
-      "sha256": "8233999c528df6d9b5ab8ba283e10c6592c077327d915e4e0c517c965ad4eacb",
-      "bytes": 791,
-      "projection": "byte-identical pinned official OpenFOAM resource",
-      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/constant/momentumTransport",
-      "canonicalSourceSha256": "8233999c528df6d9b5ab8ba283e10c6592c077327d915e4e0c517c965ad4eacb"
+      "path": "services/cfd_worker/src/untirta_cfd_worker/checkpoint.py",
+      "sha256": "85890bd62a2789f95e5da93d7d4d2ef359835869c940387b7987b0eb4391d90a",
+      "bytes": 29460,
+      "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
+      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/checkpoint.py",
+      "canonicalSourceSha256": "7b50424f2a315204996442ac87f0bc9058aa8041e19412e3e2b67369e984bc19"
     },
     {
-      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/constant/physicalProperties",
-      "sha256": "35023d390fb2813f367cdd50fdb0383ea77ab9d8273105bb10ab589e265987cf",
-      "bytes": 740,
-      "projection": "byte-identical pinned official OpenFOAM resource",
-      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/constant/physicalProperties",
-      "canonicalSourceSha256": "35023d390fb2813f367cdd50fdb0383ea77ab9d8273105bb10ab589e265987cf"
+      "path": "services/cfd_worker/src/untirta_cfd_worker/contracts.py",
+      "sha256": "5d729eb25a632b45fb7650cba2de63f54e28540b96d90e1f0bc9857e129e5eee",
+      "bytes": 6305,
+      "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
+      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/contracts.py",
+      "canonicalSourceSha256": "d417bf4acde3ae2dee6aa57aaf74e6f080603eaa0109f4ba4ad69b50a4b9231b"
     },
     {
-      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/blockMeshDict",
-      "sha256": "964b52a737dbbf7a458dfe360e388f3917ba70ef01dab92aa5a8242704aa9daa",
-      "bytes": 1254,
-      "projection": "byte-identical pinned official OpenFOAM resource",
-      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/blockMeshDict",
-      "canonicalSourceSha256": "964b52a737dbbf7a458dfe360e388f3917ba70ef01dab92aa5a8242704aa9daa"
+      "path": "services/cfd_worker/src/untirta_cfd_worker/openfoam.py",
+      "sha256": "4350b7b537fc4fb0b7c4d194838c001b79719b20fca0bb29b7d941ed0e60faac",
+      "bytes": 18178,
+      "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
+      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/openfoam.py",
+      "canonicalSourceSha256": "54e93a7df7f07206fcd831578298b612d608d5e2c1bb3e9dc3439d0a76a216d0"
     },
     {
-      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/controlDict",
-      "sha256": "8d596145c7d423c94ec7a797dff8de58a5b8ede21317ceb0940093b3c5c62c61",
-      "bytes": 1062,
-      "projection": "byte-identical pinned official OpenFOAM resource",
-      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/controlDict",
-      "canonicalSourceSha256": "8d596145c7d423c94ec7a797dff8de58a5b8ede21317ceb0940093b3c5c62c61"
+      "path": "services/cfd_worker/src/untirta_cfd_worker/process_gate.py",
+      "sha256": "c81c163cce5447555b954ce10732ef6d2b7dbf013940a094c89ecb1d9d81e122",
+      "bytes": 335,
+      "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
+      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/process_gate.py",
+      "canonicalSourceSha256": "daf69b20f39ced597b5d1958c62819fafa1c9551efbd40a9ea18ebcdaadca828"
     },
     {
-      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/fvSchemes",
-      "sha256": "9a3810fbceac7e156523d81549e9e935f0d780232a67ad8007f40c01133f8d24",
-      "bytes": 1320,
-      "projection": "byte-identical pinned official OpenFOAM resource",
-      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/fvSchemes",
-      "canonicalSourceSha256": "9a3810fbceac7e156523d81549e9e935f0d780232a67ad8007f40c01133f8d24"
+      "path": "services/cfd_worker/src/untirta_cfd_worker/resources.py",
+      "sha256": "9ca4da03af849359a2d6d2b7b4eda7d1b566dd864a6ba3ce02313a1a154e12f3",
+      "bytes": 7587,
+      "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
+      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/resources.py",
+      "canonicalSourceSha256": "09bea4559eec2afd814d0befa595a9c0b7da9ab95348a4cc56ba1930ffc218a9"
     },
     {
-      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/fvSolution",
-      "sha256": "1523433c53a27ff6cb7a4bdcc4f7f9fd20b6555e3319a6ae24b07d3ceb42d589",
-      "bytes": 1221,
-      "projection": "byte-identical pinned official OpenFOAM resource",
-      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/fvSolution",
-      "canonicalSourceSha256": "1523433c53a27ff6cb7a4bdcc4f7f9fd20b6555e3319a6ae24b07d3ceb42d589"
+      "path": "services/cfd_worker/src/untirta_cfd_worker/runner.py",
+      "sha256": "99c8e0d88e0b9247f883554f41bc6a0135e31f8d0a559058f716037a947cb221",
+      "bytes": 11814,
+      "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
+      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/runner.py",
+      "canonicalSourceSha256": "873f8faf712734f1950f7e9c22c3a4aaead607144ffe503d1986b3e6333f5e84"
+    },
+    {
+      "path": "tests/test_release_boundary.py",
+      "sha256": "a6f5b102b112b77ff03992bf744befc17e1ed8a8f383ec37aff9d9b78effff86",
+      "bytes": 9269,
+      "projection": "canonical small public release template",
+      "canonicalSourcePath": "deployment/cfd-public/test_release_boundary.py",
+      "canonicalSourceSha256": "0256f51e497740f82faae82177b5e572682636e7643338029b3ea4a30df3017b"
+    },
+    {
+      "path": "tools/cfd_worker/fixtures/openfoam12/COPYING",
+      "sha256": "a62f4262b9739f43478d025ed9fc5419585ec27b4b50e88f55e3186141e18ef1",
+      "bytes": 35646,
+      "projection": "retained license/project provenance metadata",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/COPYING",
+      "canonicalSourceSha256": "a62f4262b9739f43478d025ed9fc5419585ec27b4b50e88f55e3186141e18ef1"
     },
     {
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/0/Phi",
       "sha256": "d2012449c20c31d71487f0c62fb9bf6221ff9ba2ad5e2df20d8595d8487e9151",
       "bytes": 1024,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/0/Phi",
       "canonicalSourceSha256": "d2012449c20c31d71487f0c62fb9bf6221ff9ba2ad5e2df20d8595d8487e9151"
     },
@@ -133,7 +154,7 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/0/U.orig",
       "sha256": "c2a7a860d5f322e96afafb0f231125c8b901647a6dfaa951f8a0674c265459a4",
       "bytes": 1078,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/0/U.orig",
       "canonicalSourceSha256": "c2a7a860d5f322e96afafb0f231125c8b901647a6dfaa951f8a0674c265459a4"
     },
@@ -141,7 +162,7 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/0/alpha.water",
       "sha256": "348f306f23500ecdfea01933c0388ccec6ca339c94009aec04d646f35ff70a41",
       "bytes": 1057,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/0/alpha.water",
       "canonicalSourceSha256": "348f306f23500ecdfea01933c0388ccec6ca339c94009aec04d646f35ff70a41"
     },
@@ -149,7 +170,7 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/0/p_rgh.orig",
       "sha256": "6caafa26a9be3c6ae65db172b138f2d6716d73b8b37f3e60edffdcfdd29575eb",
       "bytes": 1037,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/0/p_rgh.orig",
       "canonicalSourceSha256": "6caafa26a9be3c6ae65db172b138f2d6716d73b8b37f3e60edffdcfdd29575eb"
     },
@@ -157,7 +178,7 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/constant/fvModels",
       "sha256": "415d836d0887073f9762240b8ec30387ad4059e3808a40eb7d8826ac9757c46e",
       "bytes": 1346,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/constant/fvModels",
       "canonicalSourceSha256": "415d836d0887073f9762240b8ec30387ad4059e3808a40eb7d8826ac9757c46e"
     },
@@ -165,7 +186,7 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/constant/g",
       "sha256": "1c557925136cce5981281b4e6f71884c210971662cba70d0d03e6450bfa5d114",
       "bytes": 748,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/constant/g",
       "canonicalSourceSha256": "1c557925136cce5981281b4e6f71884c210971662cba70d0d03e6450bfa5d114"
     },
@@ -173,7 +194,7 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/constant/geometry/bullet.stl.gz",
       "sha256": "f47f9e1146c8da1be2c5c31a2536e32caba918c65a72b64392ee64a8fde760e3",
       "bytes": 766343,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/constant/geometry/bullet.stl.gz",
       "canonicalSourceSha256": "f47f9e1146c8da1be2c5c31a2536e32caba918c65a72b64392ee64a8fde760e3"
     },
@@ -181,7 +202,7 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/constant/momentumTransport",
       "sha256": "7a7489157d4b57b8b3e2aea7c1fb276c482582f00ffc514fc6ac0c45848f129e",
       "bytes": 678,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/constant/momentumTransport",
       "canonicalSourceSha256": "7a7489157d4b57b8b3e2aea7c1fb276c482582f00ffc514fc6ac0c45848f129e"
     },
@@ -189,7 +210,7 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/constant/phaseProperties",
       "sha256": "59e45fdf6f2206494b9cae3f224baf64a6c0e7c1fd75b5787fcc9517686c2a68",
       "bytes": 735,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/constant/phaseProperties",
       "canonicalSourceSha256": "59e45fdf6f2206494b9cae3f224baf64a6c0e7c1fd75b5787fcc9517686c2a68"
     },
@@ -197,7 +218,7 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/constant/physicalProperties.vapour",
       "sha256": "e6acd525ac0a7584c0764ec880157bf164406f91fbf5d83951880161c9a1489a",
       "bytes": 770,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/constant/physicalProperties.vapour",
       "canonicalSourceSha256": "e6acd525ac0a7584c0764ec880157bf164406f91fbf5d83951880161c9a1489a"
     },
@@ -205,7 +226,7 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/constant/physicalProperties.water",
       "sha256": "d92c0fefc976ff489e204d22d501b0341ea298fe62a36d60b18158153f2197d4",
       "bytes": 762,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/constant/physicalProperties.water",
       "canonicalSourceSha256": "d92c0fefc976ff489e204d22d501b0341ea298fe62a36d60b18158153f2197d4"
     },
@@ -213,7 +234,7 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/system/blockMeshDict",
       "sha256": "cee8464c4512c329003ccacbbbc9c4f18b7c197af268f7a1899981587890b752",
       "bytes": 1281,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/system/blockMeshDict",
       "canonicalSourceSha256": "cee8464c4512c329003ccacbbbc9c4f18b7c197af268f7a1899981587890b752"
     },
@@ -221,7 +242,7 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/system/controlDict",
       "sha256": "77be88012460f1bf1ac0223c4383cfdebdc43d62db3b457250474b4f3990a777",
       "bytes": 1227,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/system/controlDict",
       "canonicalSourceSha256": "77be88012460f1bf1ac0223c4383cfdebdc43d62db3b457250474b4f3990a777"
     },
@@ -229,7 +250,7 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/system/fvSchemes",
       "sha256": "0d050bc55963c3288b17371776f1e96aa2d29371f90fed651c7e65bb7bdf512b",
       "bytes": 1275,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/system/fvSchemes",
       "canonicalSourceSha256": "0d050bc55963c3288b17371776f1e96aa2d29371f90fed651c7e65bb7bdf512b"
     },
@@ -237,7 +258,7 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/system/fvSolution",
       "sha256": "40843da6a0e7b0d28c7ebd0bd0514e4629b76f93df618a7924d31927fb0c8bcf",
       "bytes": 2102,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/system/fvSolution",
       "canonicalSourceSha256": "40843da6a0e7b0d28c7ebd0bd0514e4629b76f93df618a7924d31927fb0c8bcf"
     },
@@ -245,176 +266,169 @@
       "path": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/system/snappyHexMeshDict",
       "sha256": "a21b2dafa6f6962ddb062c1402b509813c418d290555075602a64b593faaade0",
       "bytes": 9919,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "byte-identical pinned official tutorial",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/cavitation-bullet-v1/system/snappyHexMeshDict",
       "canonicalSourceSha256": "a21b2dafa6f6962ddb062c1402b509813c418d290555075602a64b593faaade0"
-    },
-    {
-      "path": "tools/cfd_worker/fixtures/openfoam12/COPYING",
-      "sha256": "a62f4262b9739f43478d025ed9fc5419585ec27b4b50e88f55e3186141e18ef1",
-      "bytes": 35646,
-      "projection": "byte-identical pinned official OpenFOAM resource",
-      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/COPYING",
-      "canonicalSourceSha256": "a62f4262b9739f43478d025ed9fc5419585ec27b4b50e88f55e3186141e18ef1"
     },
     {
       "path": "tools/cfd_worker/fixtures/openfoam12/provenance.json",
       "sha256": "2345ea9afeb49935ad406ec0da2d5f14a072d9ae7941c42c69fb7f659eee9414",
       "bytes": 7748,
-      "projection": "byte-identical pinned official OpenFOAM resource",
+      "projection": "retained license/project provenance metadata",
       "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/provenance.json",
       "canonicalSourceSha256": "2345ea9afeb49935ad406ec0da2d5f14a072d9ae7941c42c69fb7f659eee9414"
     },
     {
-      "path": "services/cfd_worker/src/untirta_cfd_worker/__init__.py",
-      "sha256": "3aa3f7ae9e25256f952bd20308ccb3280f1f347f8b5815d9603845a0021ce9ce",
-      "bytes": 112,
-      "projection": "new public educational transport"
+      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/U",
+      "sha256": "fb01f525e4200e910cf986dc34538f203ce5e35152b4cc5d4bd7d8b034c524b6",
+      "bytes": 953,
+      "projection": "byte-identical pinned official tutorial",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/U",
+      "canonicalSourceSha256": "fb01f525e4200e910cf986dc34538f203ce5e35152b4cc5d4bd7d8b034c524b6"
     },
     {
-      "path": "services/cfd_worker/src/untirta_cfd_worker/contracts.py",
-      "sha256": "700fa95a7e3f12d5c07bedeba145bd27406bb829917edf41f4cf7ae33ed7b517",
-      "bytes": 6404,
-      "projection": "reviewed AST restriction; source hash recorded; final public-only adapter/schema pruning",
-      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/contracts.py",
-      "canonicalSourceSha256": "d417bf4acde3ae2dee6aa57aaf74e6f080603eaa0109f4ba4ad69b50a4b9231b"
+      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/epsilon",
+      "sha256": "78f51b7f918fb1a73572598033a90ad9c49ba1e4ac6bcb5112c23daf73070078",
+      "bytes": 1042,
+      "projection": "byte-identical pinned official tutorial",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/epsilon",
+      "canonicalSourceSha256": "78f51b7f918fb1a73572598033a90ad9c49ba1e4ac6bcb5112c23daf73070078"
     },
     {
-      "path": "services/cfd_worker/src/untirta_cfd_worker/resources.py",
-      "sha256": "9ca4da03af849359a2d6d2b7b4eda7d1b566dd864a6ba3ce02313a1a154e12f3",
-      "bytes": 7587,
-      "projection": "reviewed AST restriction; source hash recorded",
-      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/resources.py",
-      "canonicalSourceSha256": "09bea4559eec2afd814d0befa595a9c0b7da9ab95348a4cc56ba1930ffc218a9"
+      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/k",
+      "sha256": "d8c1744aa21734e074bb28c9921319916d2f595282e5b2369cbc42599b692e8f",
+      "bytes": 1028,
+      "projection": "byte-identical pinned official tutorial",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/k",
+      "canonicalSourceSha256": "d8c1744aa21734e074bb28c9921319916d2f595282e5b2369cbc42599b692e8f"
     },
     {
-      "path": "services/cfd_worker/src/untirta_cfd_worker/process_gate.py",
-      "sha256": "c81c163cce5447555b954ce10732ef6d2b7dbf013940a094c89ecb1d9d81e122",
-      "bytes": 335,
-      "projection": "reviewed AST restriction; source hash recorded",
-      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/process_gate.py",
-      "canonicalSourceSha256": "daf69b20f39ced597b5d1958c62819fafa1c9551efbd40a9ea18ebcdaadca828"
+      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/nuTilda",
+      "sha256": "ca2b4737e537a2aaa6c8692c2a1b84adfdc727b5188c61a4017bb12dbb73c160",
+      "bytes": 920,
+      "projection": "byte-identical pinned official tutorial",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/nuTilda",
+      "canonicalSourceSha256": "ca2b4737e537a2aaa6c8692c2a1b84adfdc727b5188c61a4017bb12dbb73c160"
     },
     {
-      "path": "services/cfd_worker/src/untirta_cfd_worker/openfoam.py",
-      "sha256": "632c3db5dc3792046c60c3a90e6186ff581f11823f004884ff9da5f27e441135",
-      "bytes": 16813,
-      "projection": "reviewed AST restriction; source hash recorded",
-      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/openfoam.py",
-      "canonicalSourceSha256": "d6846d86340a23765fb0b9e4fd6523fd5d4b3d660e7b902115462215be10430b"
+      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/nut",
+      "sha256": "bc2cb1a49149ab10a5fc95622a03096cd96d81d82c28193411f0fa65d7ab2799",
+      "bytes": 1014,
+      "projection": "byte-identical pinned official tutorial",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/nut",
+      "canonicalSourceSha256": "bc2cb1a49149ab10a5fc95622a03096cd96d81d82c28193411f0fa65d7ab2799"
     },
     {
-      "path": "services/cfd_worker/src/untirta_cfd_worker/checkpoint.py",
-      "sha256": "85890bd62a2789f95e5da93d7d4d2ef359835869c940387b7987b0eb4391d90a",
-      "bytes": 29460,
-      "projection": "reviewed AST restriction; source hash recorded",
-      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/checkpoint.py",
-      "canonicalSourceSha256": "7b50424f2a315204996442ac87f0bc9058aa8041e19412e3e2b67369e984bc19"
+      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/omega",
+      "sha256": "d291ee4de27dcd75dcd98bac7d891c946daf369be8489abd2eb5a74787d3cfff",
+      "bytes": 1027,
+      "projection": "byte-identical pinned official tutorial",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/omega",
+      "canonicalSourceSha256": "d291ee4de27dcd75dcd98bac7d891c946daf369be8489abd2eb5a74787d3cfff"
     },
     {
-      "path": "services/cfd_worker/src/untirta_cfd_worker/artifacts.py",
-      "sha256": "0c8823135bcaef3ad30998732e35688d797115647ed1557316010d38c8881d65",
-      "bytes": 24975,
-      "projection": "reviewed AST restriction; source hash recorded; final public-only adapter/schema pruning",
-      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/artifacts.py",
-      "canonicalSourceSha256": "cf609731ff62022307d66cd56dc7b3e2b19fa108904fbf811aacdd3c3c6143e6"
+      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/p",
+      "sha256": "d4bacc4f904d3483b70892a0869f9bf8c1a8c185a0915ad68f597ba3d887d688",
+      "bytes": 914,
+      "projection": "byte-identical pinned official tutorial",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/p",
+      "canonicalSourceSha256": "d4bacc4f904d3483b70892a0869f9bf8c1a8c185a0915ad68f597ba3d887d688"
     },
     {
-      "path": "services/cfd_worker/src/untirta_cfd_worker/runner.py",
-      "sha256": "5463ab6893b36296e1cc98a1d1517faf65c98e086c6bf6da8af34e5744b045a7",
-      "bytes": 11956,
-      "projection": "reviewed AST restriction; source hash recorded; final public-only adapter/schema pruning",
-      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/runner.py",
-      "canonicalSourceSha256": "873f8faf712734f1950f7e9c22c3a4aaead607144ffe503d1986b3e6333f5e84"
+      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/constant/momentumTransport",
+      "sha256": "8233999c528df6d9b5ab8ba283e10c6592c077327d915e4e0c517c965ad4eacb",
+      "bytes": 791,
+      "projection": "byte-identical pinned official tutorial",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/constant/momentumTransport",
+      "canonicalSourceSha256": "8233999c528df6d9b5ab8ba283e10c6592c077327d915e4e0c517c965ad4eacb"
     },
     {
-      "path": "services/cfd_worker/src/untirta_cfd_worker/capabilities.py",
-      "sha256": "d43727e3bd8d0cf3956e52c5e2882c8c961009975450281f8ad4358ada957446",
-      "bytes": 2271,
-      "projection": "Linux/OpenFOAM-only capability projection; no license/SDK probe",
-      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/capabilities.py",
-      "canonicalSourceSha256": "e8a71ba8fbe302d2db959173da5c8559656f28277a4e29140f7e8d8971f60287"
+      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/constant/physicalProperties",
+      "sha256": "35023d390fb2813f367cdd50fdb0383ea77ab9d8273105bb10ab589e265987cf",
+      "bytes": 740,
+      "projection": "byte-identical pinned official tutorial",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/constant/physicalProperties",
+      "canonicalSourceSha256": "35023d390fb2813f367cdd50fdb0383ea77ab9d8273105bb10ab589e265987cf"
     },
     {
-      "path": "tools/cfd_worker/prepare_artifact.py",
-      "sha256": "b2be8facd5c2134b9e38ac3326d62dcbca8cd3bd4ca40fae867d328b816f716f",
-      "bytes": 10625,
-      "projection": "byte-identical bounded educational output tool",
-      "canonicalSourcePath": "tools/cfd_worker/prepare_artifact.py",
-      "canonicalSourceSha256": "b2be8facd5c2134b9e38ac3326d62dcbca8cd3bd4ca40fae867d328b816f716f"
+      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/blockMeshDict",
+      "sha256": "964b52a737dbbf7a458dfe360e388f3917ba70ef01dab92aa5a8242704aa9daa",
+      "bytes": 1254,
+      "projection": "byte-identical pinned official tutorial",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/blockMeshDict",
+      "canonicalSourceSha256": "964b52a737dbbf7a458dfe360e388f3917ba70ef01dab92aa5a8242704aa9daa"
     },
     {
-      "path": "tools/cfd_worker/verify_educational_run.py",
-      "sha256": "b8fae6d1fba55885e847686c605a9dddaf1264a3b69f4e6586b37eac10c88d56",
-      "bytes": 45323,
-      "projection": "byte-identical bounded educational output tool",
-      "canonicalSourcePath": "tools/cfd_worker/verify_educational_run.py",
-      "canonicalSourceSha256": "c22f7b8ec9820f2946904ecee6a4066d29df42c06d3d8ee642a584ce1f3e1473"
+      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/controlDict",
+      "sha256": "8d596145c7d423c94ec7a797dff8de58a5b8ede21317ceb0940093b3c5c62c61",
+      "bytes": 1062,
+      "projection": "byte-identical pinned official tutorial",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/controlDict",
+      "canonicalSourceSha256": "8d596145c7d423c94ec7a797dff8de58a5b8ede21317ceb0940093b3c5c62c61"
     },
     {
-      "path": "tools/cfd_worker/prepare_diagnostics.py",
-      "sha256": "a02a57312727ef2b25d020afc51bd57a3905c0e722729635300277e94fbdf020",
-      "bytes": 6511,
-      "projection": "byte-identical bounded educational output tool",
-      "canonicalSourcePath": "tools/cfd_worker/prepare_diagnostics.py",
-      "canonicalSourceSha256": "a02a57312727ef2b25d020afc51bd57a3905c0e722729635300277e94fbdf020"
+      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/fvSchemes",
+      "sha256": "9a3810fbceac7e156523d81549e9e935f0d780232a67ad8007f40c01133f8d24",
+      "bytes": 1320,
+      "projection": "byte-identical pinned official tutorial",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/fvSchemes",
+      "canonicalSourceSha256": "9a3810fbceac7e156523d81549e9e935f0d780232a67ad8007f40c01133f8d24"
     },
     {
-      "path": "tools/cfd_worker/run.py",
-      "sha256": "804266192b1738acd64b2538a23c702d4c6b99aea7c162b29eba37f486708688",
-      "bytes": 2270,
-      "projection": "fixed-only CLI; input/reference/native-case/arbitrary commands excluded",
-      "canonicalSourcePath": "tools/cfd_worker/run.py",
-      "canonicalSourceSha256": "afb9679346648814cd53fd0483a8e510d24f0c35fb67579ddfc02177fe12ac75"
-    },
-    {
-      "path": "tools/cfd_worker/public_runner_guard.py",
-      "sha256": "7b0aad3c34107d451e9cbf6975831399b435044a996166595fae0553d97a46b7",
-      "bytes": 1981,
-      "projection": "new public educational transport"
+      "path": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/fvSolution",
+      "sha256": "1523433c53a27ff6cb7a4bdcc4f7f9fd20b6555e3319a6ae24b07d3ceb42d589",
+      "bytes": 1221,
+      "projection": "byte-identical pinned official tutorial",
+      "canonicalSourcePath": "tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/system/fvSolution",
+      "canonicalSourceSha256": "1523433c53a27ff6cb7a4bdcc4f7f9fd20b6555e3319a6ae24b07d3ceb42d589"
     },
     {
       "path": "tools/cfd_worker/install_openfoam12.sh",
       "sha256": "4aa3700480029844ad30d0e92d73d96c12bc405caa81d7b03edbaa618dd9ba32",
       "bytes": 1207,
-      "projection": "public-only event/API guard; exact checksum-pinned package download/install",
+      "projection": "same checksum-pinned installer with fail-closed public event/API guard",
       "canonicalSourcePath": "tools/cfd_worker/install_openfoam12.sh",
       "canonicalSourceSha256": "a38b0f452f10e7e24ff2e6ce6f0f62102dc6567edc293cf42cbae66821431908"
     },
     {
-      "path": ".github/workflows/transient-cfd-validation.yml",
-      "sha256": "61ad4f8868bf6077465df6c002711bb76fa8854121fd5014c95f9a806a958ef8",
-      "bytes": 5223,
-      "projection": "manual PUBLIC-only standard runner; no private allowance variables/secrets",
-      "canonicalSourcePath": ".github/workflows/transient-cfd-validation.yml",
-      "canonicalSourceSha256": "84436b82f81f19646afbbb8c6b6a5d3bb0d55649884c3df0df32b0b0879f8c6c"
+      "path": "tools/cfd_worker/prepare_artifact.py",
+      "sha256": "b2be8facd5c2134b9e38ac3326d62dcbca8cd3bd4ca40fae867d328b816f716f",
+      "bytes": 10625,
+      "projection": "same bounded educational output tool",
+      "canonicalSourcePath": "tools/cfd_worker/prepare_artifact.py",
+      "canonicalSourceSha256": "b2be8facd5c2134b9e38ac3326d62dcbca8cd3bd4ca40fae867d328b816f716f"
     },
     {
-      "path": ".github/workflows/cavitation-cfd-validation.yml",
-      "sha256": "100731cdc8c19535007e9a73fc58930071d24d1bf46e8f8e4cad6fff2353c906",
-      "bytes": 5213,
-      "projection": "manual PUBLIC-only standard runner; no private allowance variables/secrets",
-      "canonicalSourcePath": ".github/workflows/cavitation-cfd-validation.yml",
-      "canonicalSourceSha256": "e2f5c4ce91495be770fa4c0c9c3ae258d0b2534fb6f27e90e81f575f7c250a4a"
+      "path": "tools/cfd_worker/prepare_diagnostics.py",
+      "sha256": "a02a57312727ef2b25d020afc51bd57a3905c0e722729635300277e94fbdf020",
+      "bytes": 6511,
+      "projection": "same bounded educational output tool",
+      "canonicalSourcePath": "tools/cfd_worker/prepare_diagnostics.py",
+      "canonicalSourceSha256": "a02a57312727ef2b25d020afc51bd57a3905c0e722729635300277e94fbdf020"
     },
     {
-      "path": ".gitignore",
-      "sha256": "2fc4c40e985ecec32147d45fc0d3b1f496e4cd616ab1fca670fa87bfcdb5b44e",
-      "bytes": 38,
-      "projection": "new public educational transport"
+      "path": "tools/cfd_worker/public_runner_guard.py",
+      "sha256": "7b0aad3c34107d451e9cbf6975831399b435044a996166595fae0553d97a46b7",
+      "bytes": 1981,
+      "projection": "canonical small public release template",
+      "canonicalSourcePath": "deployment/cfd-public/public_runner_guard.py",
+      "canonicalSourceSha256": "7cce950a18d181476a840e8fab08c809b005bf1ace7e68649aa77751711413a7"
     },
     {
-      "path": "README.md",
-      "sha256": "fb8a040aa69de57ece4d7e83a9d8f3de31a51b0c467f86ee4d11e84432437c00",
-      "bytes": 4850,
-      "projection": "new public educational transport"
+      "path": "tools/cfd_worker/run.py",
+      "sha256": "5d8ae9d248505f6e10e662a4723d0b4bb1ccaf0a5e273b548c2cb52014a82db3",
+      "bytes": 2613,
+      "projection": "fixed educational CLI; private file ingress removed",
+      "canonicalSourcePath": "tools/cfd_worker/run.py",
+      "canonicalSourceSha256": "afb9679346648814cd53fd0483a8e510d24f0c35fb67579ddfc02177fe12ac75"
     },
     {
-      "path": "tests/test_release_boundary.py",
-      "sha256": "582e8841230b71cdb6502936960fd847bccd9acf328867ca9afb30bba46a6102",
-      "bytes": 8565,
-      "projection": "new public educational transport"
+      "path": "tools/cfd_worker/verify_educational_run.py",
+      "sha256": "af56da4dd92ed698d399f2cc6c0eaf72b04958d6b386ace85aa492d83b22d403",
+      "bytes": 46696,
+      "projection": "same bounded educational output tool",
+      "canonicalSourcePath": "tools/cfd_worker/verify_educational_run.py",
+      "canonicalSourceSha256": "af56da4dd92ed698d399f2cc6c0eaf72b04958d6b386ace85aa492d83b22d403"
     }
-  ],
-  "initialSourceCommit": "f9646b6115fbd13d4d57bb34bc00b14097848b9a"
+  ]
 }

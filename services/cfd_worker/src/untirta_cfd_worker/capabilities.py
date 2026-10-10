@@ -1,3 +1,4 @@
+"""Inspect actual local capabilities without launching/installing a solver."""
 import os
 from pathlib import Path
 import shutil
@@ -14,16 +15,10 @@ def linux_cgroup_limits() -> dict:
     except (OSError, StopIteration, ValueError):
         return {'supported': False}
 
-def capability_report():
-    cgroup=linux_cgroup_limits() if sys.platform=='linux' else {'supported':False}
-    executables={name:shutil.which(name) for name in ('blockMesh','checkMesh','foamRun','snappyHexMesh','potentialFoam')}
-    solver=sys.platform=='linux' and all(executables.values()) and os.environ.get('WM_PROJECT_VERSION')=='12'
-    bounded=bool(cgroup.get('supported'))
-    return {'schemaVersion':'untirta.cfd-worker-capabilities.v1','mainApplicationDependency':False,
-      'resourceEnforcement':{'available':bounded,'mode':'inherited-cgroup-v2' if bounded else 'unavailable',
-        'aggregateMemoryHardCap':bounded,'singleJob':True,'threads':1,'diskCap':'10-ms-watchdog-not-filesystem-hard-quota',
-        'maximumProcessesOrTasks':cgroup.get('maximumTasks'),'linuxInheritedLimits':cgroup},
-      'adapters':{'openfoam':{'available':bool(solver and bounded),'solverDetected':bool(solver),
-        'requiredVersion':'Foundation-12','detectedVersion':os.environ.get('WM_PROJECT_VERSION'),
-        'reasonCode':'CFD_READY_FOR_DEVELOPMENT_BENCHMARK' if solver and bounded else 'CFD_RESOURCE_CAP_REQUIRED' if solver else 'CFD_SOLVER_UNAVAILABLE',
-        'profiles':['transient-cavity-v1','cavitation-bullet-v1'],'pumpCfdValidated':False}},'actualCfdRunVerified':False}
+def capability_report() -> dict:
+    native_windows = False
+    cgroup = linux_cgroup_limits() if sys.platform == 'linux' else {'supported': False}
+    resource_supported = native_windows or cgroup['supported']
+    executables = {name: shutil.which(name) for name in ('blockMesh', 'checkMesh', 'foamRun', 'snappyHexMesh', 'potentialFoam')}
+    openfoam = sys.platform == 'linux' and all(executables.values()) and (os.environ.get('WM_PROJECT_VERSION') == '12')
+    return {'schemaVersion': 'untirta.cfd-worker-capabilities.v1', 'mainApplicationDependency': False, 'resourceEnforcement': {'available': resource_supported, 'mode': 'windows-job-object' if native_windows else 'inherited-cgroup-v2' if cgroup['supported'] else 'unavailable', 'aggregateMemoryHardCap': resource_supported, 'singleJob': True, 'threads': 1, 'diskCap': '10-ms-watchdog-not-filesystem-hard-quota', 'maximumProcessesOrTasks': 32 if native_windows else cgroup.get('maximumTasks'), 'linuxInheritedLimits': cgroup}, 'adapters': {'openfoam': {'available': bool(openfoam and resource_supported), 'solverDetected': bool(openfoam), 'requiredVersion': 'Foundation-12', 'detectedVersion': os.environ.get('WM_PROJECT_VERSION'), 'reasonCode': 'CFD_READY_FOR_DEVELOPMENT_BENCHMARK' if openfoam and resource_supported else 'CFD_RESOURCE_CAP_REQUIRED' if openfoam else 'CFD_SOLVER_UNAVAILABLE', 'profiles': ['transient-cavity-v1', 'cavitation-bullet-v1'], 'pumpCfdValidated': False}}, 'actualCfdRunVerified': False}
