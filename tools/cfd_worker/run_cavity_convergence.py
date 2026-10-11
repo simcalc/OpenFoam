@@ -9,16 +9,21 @@ qualified asymptotic convergence acceptance.
 from __future__ import annotations
 
 import argparse
+from io import BytesIO
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from hashlib import sha256
 import json
 import math
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import shutil
+import stat
 import sys
+import tempfile
+from urllib.parse import urlparse
+from urllib.request import Request, build_opener, HTTPRedirectHandler
 import zipfile
 
 sys.dont_write_bytecode = True
@@ -59,7 +64,22 @@ class CampaignProfile:
 LEGACY = CampaignProfile(CAMPAIGN, END_TIME, OUTPUT_INTERVAL, RUNS)
 LAMINAR = CampaignProfile("cavity-laminar-re100-discretisation-v1", 0.5, 0.1,
     RUNS + (("mesh80-dt00025-tight", 80, 0.00025),), True)
-PROFILES = {"ras-early": LEGACY, "laminar-re100": LAMINAR}
+REFINED = CampaignProfile("cavity-laminar-re100-discretisation-v2", 0.5, 0.1,
+    (("mesh160-dt00025", 160, 0.00025), ("mesh160-dt00025-tight", 160, 0.00025)), True)
+PROFILES = {"ras-early": LEGACY, "laminar-re100": LAMINAR, "laminar-re100-refined": REFINED}
+PRIOR_REPOSITORY = "simcalc/OpenFoam"
+PRIOR_RUN_ID = 38109150013
+PRIOR_COMMIT = "2fe787debcd61295296ab9bec971d739d1b24f2b"
+PRIOR_ARTIFACT_ID = 11691396227
+PRIOR_OUTER_BYTES = 9011148
+PRIOR_OUTER_SHA256 = "f1e3f20b041cdd5112f9c923718e814c4f2dc352c70b11f23d77b2d52edfd7fb"
+PRIOR_INNER_SHA256 = "f93d3aa15a09284a5406fc65f8e09f6db06d27fbc3fac042f77624f2cc4d4720"
+PRIOR_REPORT_SHA256 = "468bf752a877ec849ffc6c546d996830ac972974bb1ac6c33f041e26f0f3441b"
+PRIOR_RELEASE_ID = 409396355
+PRIOR_RELEASE_ASSET_ID = 629710685
+PRIOR_RELEASE_TAG = "cavity-laminar-re100-v1-evidence"
+PRIOR_RELEASE_ASSET_NAME = "outer-github-artifact.zip"
+PRIOR_RELEASE_URL = "https://github.com/simcalc/OpenFoam/releases/download/cavity-laminar-re100-v1-evidence/outer-github-artifact.zip"
 LINEAR_TOLERANCE = "1e-9"
 TIGHT_LINEAR_TOLERANCE = "1e-11"
 ITERATIVE_SENSITIVITY_FRACTION = 0.1
@@ -121,7 +141,7 @@ def verified_source(fixture: Path) -> dict:
 
 def prepare_case(source: Path, case: Path, divisions: int, dt: float,
                  profile: CampaignProfile = LEGACY, *, tight: bool = False) -> dict:
-    if profile not in (LEGACY, LAMINAR) or (divisions, dt) not in {(n, step) for _, n, step in profile.runs} or (tight and (profile != LAMINAR or (divisions, dt) != (80, 0.00025))):
+    if profile not in (LEGACY, LAMINAR, REFINED) or (divisions, dt) not in {(n, step) for _, n, step in profile.runs} or (tight and (not profile.laminar or (divisions, dt) != profile.runs[-1][1:])):
         raise WorkerDiagnostic("CFD_CAMPAIGN_PROFILE_INVALID", "Only the fixed reviewed profile grid/time-step/tolerance combinations may run.")
     shutil.copytree(source, case)
     block = case / "system/blockMeshDict"
@@ -338,14 +358,193 @@ def persist_run_diagnostics(row: dict, workspace: Path) -> None:
     row["diagnostics"]["sampleHistory"] = descriptor(path, workspace)
 
 
-def assess_linear_repeat(base: dict, tight: dict, spatial: dict, temporal: dict) -> dict:
+def strict_json(raw: bytes) -> dict:
+    return json.loads(raw.decode("utf-8"), parse_constant=lambda _: (_ for _ in ()).throw(ValueError("Nonfinite JSON is prohibited.")))
+
+
+def checked_archive(raw: bytes, *, outer: bool = False) -> dict[str, bytes]:
+    """Validate bounded immutable evidence before any native file is extracted."""
+    if len(raw) > (26 if outer else 25) * 1024**2:
+        raise WorkerDiagnostic("CFD_PRIOR_ARCHIVE_BUDGET", "Use the exact bounded retained prior artifact; arbitrary archives are prohibited.")
+    files, total = {}, 0
+    with zipfile.ZipFile(BytesIO(raw)) as archive:
+        if not 0 < len(archive.infolist()) <= (2 if outer else 1500):
+            raise WorkerDiagnostic("CFD_PRIOR_ARCHIVE_INVALID", "The immutable prior evidence must have its reviewed bounded regular file set.")
+        for item in archive.infolist():
+            name, mode = item.filename, item.external_attr >> 16
+            parts = PurePosixPath(name).parts
+            limit = 25 * 1024**2 if outer else 4 * 1024**2
+            if (not name or name in files or item.orig_filename != name or "\\" in name or name.startswith("/")
+                    or any(part in (".", "..", "") or ":" in part or "\x00" in part for part in parts)
+                    or item.is_dir() or item.flag_bits & 1 or stat.S_IFMT(mode) not in (0, stat.S_IFREG) or mode & 0o111
+                    or item.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED)
+                    or not 0 <= item.file_size <= limit or item.file_size > max(item.compress_size, 1) * 200):
+                raise WorkerDiagnostic("CFD_PRIOR_ARCHIVE_INVALID", "Restore the exact prior regular native evidence; unsafe paths, executable content and oversized files are rejected.")
+            total += item.file_size
+            if total > 64 * 1024**2:
+                raise WorkerDiagnostic("CFD_PRIOR_ARCHIVE_BUDGET", "The prior archive exceeds the unchanged 64MiB uncompressed evidence limit.")
+            with archive.open(item) as stream:
+                payload = stream.read(limit + 1)
+            if len(payload) != item.file_size:
+                raise WorkerDiagnostic("CFD_PRIOR_ARCHIVE_INVALID", "The prior evidence size declaration must match every byte.")
+            files[name] = payload
+    return files
+
+
+class CredentialSafeRedirect(HTTPRedirectHandler):
+    def redirect_request(self, request, response, code, message, headers, newurl):
+        parsed = urlparse(newurl)
+        if (parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password
+                or not (parsed.hostname == "api.github.com" or parsed.hostname.endswith(".blob.core.windows.net")
+                        or parsed.hostname.endswith(".actions.githubusercontent.com")
+                        or parsed.hostname in ("release-assets.githubusercontent.com", "objects.githubusercontent.com"))):
+            raise WorkerDiagnostic("CFD_PRIOR_REDIRECT_INVALID", "Only GitHub's HTTPS artifact delivery hosts are permitted; redirect credentials are never recorded.")
+        safe_headers = {"Accept": "application/vnd.github+json", "User-Agent": "untirta-fixed-cavity-evidence"}
+        if parsed.hostname == "api.github.com":
+            safe_headers["Authorization"] = request.headers.get("Authorization", "")
+        return Request(newurl, headers=safe_headers)
+
+
+def fetch_fixed_prior() -> tuple[bytes, dict]:
+    """Read only one pinned public run/artifact with the ephemeral Actions token."""
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if not token:
+        raise WorkerDiagnostic("CFD_PRIOR_TOKEN_REQUIRED", "The fixed linked refinement needs the runner's ephemeral read-only Actions token, not a user credential.")
+    opener = build_opener(CredentialSafeRedirect())
+    def read(endpoint, maximum):
+        request = Request("https://api.github.com/repos/" + PRIOR_REPOSITORY + endpoint,
+            headers={"Authorization": "Bearer " + token, "Accept": "application/vnd.github+json", "User-Agent": "untirta-fixed-cavity-evidence"})
+        try:
+            with opener.open(request, timeout=45) as response:
+                raw = response.read(maximum + 1)
+            if len(raw) > maximum:
+                raise WorkerDiagnostic("CFD_PRIOR_DOWNLOAD_BUDGET", "The fixed prior API response exceeded its byte limit; no payload is accepted.")
+            return raw
+        except WorkerDiagnostic:
+            raise
+        except Exception:
+            raise WorkerDiagnostic("CFD_PRIOR_DOWNLOAD_REQUIRED", "The retained fixed prior GitHub artifact must remain available; preserve previous local evidence if its seven-day hosted retention has expired.") from None
+    run = strict_json(read("/actions/runs/" + str(PRIOR_RUN_ID), 2 * 1024**2))
+    artifact = None
+    try:
+        artifact = strict_json(read("/actions/artifacts/" + str(PRIOR_ARTIFACT_ID), 2 * 1024**2))
+    except WorkerDiagnostic as exc:
+        if exc.code != "CFD_PRIOR_DOWNLOAD_REQUIRED":
+            raise
+    durable = artifact is None or artifact.get("expired") is True
+    if durable:
+        release = strict_json(read("/releases/tags/" + PRIOR_RELEASE_TAG, 2 * 1024**2))
+        validate_prior_release(release)
+        artifact = {"id": PRIOR_ARTIFACT_ID, "name": "cavity-discretisation-development-evidence", "expired": False,
+            "size_in_bytes": PRIOR_OUTER_BYTES, "digest": "sha256:" + PRIOR_OUTER_SHA256,
+            "workflow_run": {"id": PRIOR_RUN_ID, "head_sha": PRIOR_COMMIT}}
+        try:
+            with opener.open(Request(PRIOR_RELEASE_URL, headers={"User-Agent": "untirta-fixed-cavity-evidence"}), timeout=45) as response:
+                outer = response.read(PRIOR_OUTER_BYTES + 1)
+        except Exception:
+            raise WorkerDiagnostic("CFD_PRIOR_RELEASE_REQUIRED", "The exact reviewed public evidence Release asset is required after Actions artifact retention expires; no substitute is accepted.") from None
+    else:
+        outer = read("/actions/artifacts/" + str(PRIOR_ARTIFACT_ID) + "/zip", PRIOR_OUTER_BYTES)
+    association = {"repository": run["repository"]["full_name"], "repositoryPrivate": run["repository"]["private"],
+        "runId": run["id"], "headSha": run["head_sha"], "event": run["event"], "workflow": run["path"],
+        "status": run["status"], "conclusion": run["conclusion"], "artifactId": artifact["id"],
+        "artifactName": artifact["name"], "artifactExpired": artifact["expired"], "artifactBytes": artifact["size_in_bytes"],
+        "artifactDigest": artifact["digest"], "artifactRunId": artifact["workflow_run"]["id"],
+        "artifactHeadSha": artifact["workflow_run"]["head_sha"], "headersAndRedirectCredentialsStored": False,
+        "retrievalMethod": "PinnedDurableRelease" if durable else "AuthenticatedActionsArtifact",
+        "originalArtifactAssociationIsHistorical": durable}
+    validate_prior_association(association)
+    return outer, association
+
+
+def validate_prior_release(release: dict) -> None:
+    assets = release.get("assets", [])
+    expected = {"id": PRIOR_RELEASE_ASSET_ID, "name": PRIOR_RELEASE_ASSET_NAME, "size": PRIOR_OUTER_BYTES,
+        "digest": "sha256:" + PRIOR_OUTER_SHA256, "browser_download_url": PRIOR_RELEASE_URL}
+    if (release.get("id") != PRIOR_RELEASE_ID or release.get("tag_name") != PRIOR_RELEASE_TAG
+            or release.get("target_commitish") != PRIOR_COMMIT or len(assets) != 1
+            or any(assets[0].get(key) != value for key, value in expected.items())):
+        raise WorkerDiagnostic("CFD_PRIOR_RELEASE_MISMATCH", "The durable public evidence asset must retain its exact reviewed release id, source target, URL, asset id, name, bytes and SHA256.")
+
+
+def validate_prior_association(association: dict) -> None:
+    expected = {"repository": PRIOR_REPOSITORY, "repositoryPrivate": False, "runId": PRIOR_RUN_ID,
+        "headSha": PRIOR_COMMIT, "event": "workflow_dispatch", "workflow": ".github/workflows/cavity-convergence-validation.yml",
+        "status": "completed", "conclusion": "success", "artifactId": PRIOR_ARTIFACT_ID,
+        "artifactName": "cavity-discretisation-development-evidence", "artifactExpired": False,
+        "artifactBytes": PRIOR_OUTER_BYTES, "artifactDigest": "sha256:" + PRIOR_OUTER_SHA256,
+        "artifactRunId": PRIOR_RUN_ID, "artifactHeadSha": PRIOR_COMMIT, "headersAndRedirectCredentialsStored": False}
+    if "retrievalMethod" in association:
+        method = association["retrievalMethod"]
+        if method not in ("PinnedDurableRelease", "AuthenticatedActionsArtifact"):
+            raise WorkerDiagnostic("CFD_PRIOR_RUN_ASSOCIATION_MISMATCH", "Only authenticated Actions retrieval or the exact pinned durable public Release may supply prior source bytes.")
+        expected["retrievalMethod"] = method
+        expected["originalArtifactAssociationIsHistorical"] = method == "PinnedDurableRelease"
+    if association != expected:
+        raise WorkerDiagnostic("CFD_PRIOR_RUN_ASSOCIATION_MISMATCH", "Only the exact authenticated successful public laminar-v1 run and pinned artifact may supply linked spatial evidence.")
+
+
+def verify_fixed_prior(raw: bytes, association: dict, source: dict) -> dict:
+    """Recompute prior40/80 from their native mesh/U, not generic report values."""
+    validate_prior_association(association)
+    if len(raw) != PRIOR_OUTER_BYTES or sha256(raw).hexdigest() != PRIOR_OUTER_SHA256:
+        raise WorkerDiagnostic("CFD_PRIOR_OUTER_CHECKSUM_MISMATCH", "The exact retained authenticated GitHub ZIP bytes are required before reuse.")
+    outer = checked_archive(raw, outer=True)
+    if set(outer) != {"report.json", "cavity-convergence-evidence.zip"} or sha256(outer["report.json"]).hexdigest() != PRIOR_REPORT_SHA256 or sha256(outer["cavity-convergence-evidence.zip"]).hexdigest() != PRIOR_INNER_SHA256:
+        raise WorkerDiagnostic("CFD_PRIOR_SOURCE_CHECKSUM_MISMATCH", "The prior report and native archive must match their reviewed immutable source digests.")
+    report = strict_json(outer["report.json"])
+    if (report["campaign"] != LAMINAR.id or report["status"] != "EducationalNumericalExperimentCompleted"
+            or report["immutableSource"] != source or report["source"] != profile_identity(source, LAMINAR)
+            or report["runtimePackage"] != {"version": "20250206", "sha256": OPENFOAM_PACKAGE_SHA256, "requiredSolverBuild": OPENFOAM_PACKAGE_BUILD}
+            or report["actualSolverExecutionCompleted"] is not True):
+        raise WorkerDiagnostic("CFD_PRIOR_PHYSICS_IDENTITY_MISMATCH", "Reuse requires the identical original geometry, boundary, Re100 physics, pinned solver build and successful prior source identity.")
+    files = checked_archive(outer["cavity-convergence-evidence.zip"])
+    manifest = strict_json(files["artifact-manifest.json"])
+    descriptors = {item["path"]: item for item in manifest["files"]}
+    if (len(descriptors) != len(manifest["files"]) or set(files) != set(descriptors) | {"artifact-manifest.json"}
+            or strict_json(files["campaign-report.json"]) != {key: value for key, value in report.items() if key != "artifact"}
+            or any(item["bytes"] != len(files[name]) or item["sha256"] != sha256(files[name]).hexdigest() for name, item in descriptors.items())):
+        raise WorkerDiagnostic("CFD_PRIOR_MANIFEST_MISMATCH", "Every original sealed report, settings, native file and sanitized log byte must match the prior artifact manifest.")
+    checked = []
+    with tempfile.TemporaryDirectory(prefix="fixed-prior-native-") as directory:
+        prior_workspace = Path(directory)
+        for name, n, dt in LAMINAR.runs[1:3]:
+            row = next(item for item in report["runs"] if item["id"] == name)
+            for path, payload in files.items():
+                if path.startswith("runs/" + name + "/"):
+                    target = prior_workspace / path
+                    if not target.resolve().is_relative_to(prior_workspace.resolve()):
+                        raise WorkerDiagnostic("CFD_PRIOR_NATIVE_PATH_INVALID", "Prior native evidence must remain inside its temporary isolated reinspection workspace.")
+                    target.parent.mkdir(parents=True, exist_ok=True); target.write_bytes(payload)
+            actual, quantity, history = collect_run(prior_workspace / "runs" / name / "native-case", prior_workspace,
+                name, n, dt, profile_identity(source, LAMINAR), report["binding"], LAMINAR)
+            if (quantity != strict_json(files[row["reportPath"]]) or history != strict_json(files[row["historyPath"]])
+                    or actual["quantity"] != row["quantity"] or actual["meshSha256"] != row["meshSha256"]
+                    or actual["diagnostics"]["samples"] != strict_json(files[row["diagnostics"]["sampleHistory"]["path"]])["samples"]
+                    or row["divisions"] != n or row["timeStepSeconds"] != dt or row["physicalEndTimeSeconds"] != REFINED.end_time
+                    or row["derivedSettings"]["linearTolerance"] != LINEAR_TOLERANCE):
+                raise WorkerDiagnostic("CFD_PRIOR_NATIVE_QUANTITY_MISMATCH", "The retained40/80native mesh/fields, physical endpoint, step and baseline linear tolerance must exactly reproduce their sealed source reports.")
+            for path, expected in row["derivedSettings"]["derivedFileSha256"].items():
+                if sha256(files["runs/" + name + "/native-case/" + path]).hexdigest() != expected:
+                    raise WorkerDiagnostic("CFD_PRIOR_SETTINGS_MISMATCH", "Prior numerical settings must match their sealed source bytes before spatial reuse.")
+            checked.append({"row": row, "report": quantity,
+                "nativeSources": [{**item, "resolvedAgainstPriorInnerSha256": PRIOR_INNER_SHA256} for item in quantity["sourceFiles"]]})
+    return {"association": association, "outerSha256": PRIOR_OUTER_SHA256, "innerSha256": PRIOR_INNER_SHA256,
+        "reportSha256": PRIOR_REPORT_SHA256, "nativeRecomputed": True, "spatialRuns": checked,
+        "priorTemporalMeshDivisions": 80, "priorTemporalAssessment": report["temporalAssessment"],
+        "priorTemporalEvidenceQualifiesMesh160": False, "credentialsStored": False,
+        "durableSource": {"releaseId": PRIOR_RELEASE_ID, "assetId": PRIOR_RELEASE_ASSET_ID, "url": PRIOR_RELEASE_URL,
+            "bytes": PRIOR_OUTER_BYTES, "sha256": PRIOR_OUTER_SHA256, "sourceCommit": PRIOR_COMMIT}}
+
+
+def assess_linear_repeat(base: dict, tight: dict, spatial: dict, temporal: dict | None) -> dict:
     """A controlled linear-tolerance experiment; no nonlinear-error qualification."""
     if (base["cellCount"] != tight["cellCount"] or base["meshSha256"] != tight["meshSha256"]
             or base["timeStepSeconds"] != tight["timeStepSeconds"] or base["physicalEndTimeSeconds"] != tight["physicalEndTimeSeconds"]
             or base["quantity"]["id"] != tight["quantity"]["id"] or base["quantity"]["unit"] != tight["quantity"]["unit"]):
         raise WorkerDiagnostic("CFD_CAMPAIGN_REPEAT_MISMATCH", "Repeat the same actual native mesh, physical time, time step and quantity with only the declared linear-tolerance change.")
     baseline, repeated = base["quantity"]["value"], tight["quantity"]["value"]
-    changes = (spatial["fineRelativeChange"], temporal["fineRelativeChange"])
+    changes = (spatial["fineRelativeChange"], temporal["fineRelativeChange"]) if temporal is not None else (spatial["fineRelativeChange"],)
     if not all(math.isfinite(v) for v in (baseline, repeated, *changes)) or baseline <= 0 or repeated <= 0 or min(changes) < 0:
         raise WorkerDiagnostic("CFD_CAMPAIGN_REPEAT_QUANTITY_INVALID", "Preserve native quantities; this relative kinetic-energy comparison requires positive finite operands and finite nonnegative sensitivity changes.")
     delta = abs(repeated - baseline) / abs(baseline)
@@ -353,7 +552,7 @@ def assess_linear_repeat(base: dict, tight: dict, spatial: dict, temporal: dict)
     return {"status": "LinearToleranceSensitivityAssessed", "baselineRunId": base["id"], "tightRunId": tight["id"],
         "baselineTolerance": LINEAR_TOLERANCE, "tightTolerance": TIGHT_LINEAR_TOLERANCE,
         "relativeChange": delta, "declaredMaximumFractionOfDiscretisationChange": ITERATIVE_SENSITIVITY_FRACTION,
-        "declaredCriterionBasis": "Educational target: linear-tolerance sensitivity at most10% of the smaller observed spatial/temporal fine-relative change; not a physical-error bound.",
+        "declaredCriterionBasis": "Educational target: linear-tolerance sensitivity at most10% of the smaller observed spatial/temporal fine-relative change; not a physical-error bound." if temporal is not None else "Educational spatial-only target: linear-tolerance sensitivity at most10% of the observed spatial fine-relative change; mesh160 temporal sensitivity is unassessed, not borrowed from mesh80.",
         "relativeChangeThreshold": threshold, "nominalCriterionSatisfied": delta <= threshold,
         "nonlinearCouplingErrorAssessed": False, "numericalQualitySatisfied": None,
         "engineeringValidated": False, "mainApplicationWrites": False,
@@ -368,7 +567,7 @@ def assess_linear_repeat(base: dict, tight: dict, spatial: dict, temporal: dict)
 
 
 def execute_campaign(workspace_root: Path, fixture: Path, profile: CampaignProfile = LEGACY) -> tuple[dict, Path]:
-    if profile not in (LEGACY, LAMINAR):
+    if profile not in (LEGACY, LAMINAR, REFINED):
         raise WorkerDiagnostic("CFD_CAMPAIGN_PROFILE_INVALID", "Only an immutable reviewed campaign profile may execute.")
     source = verified_source(fixture)
     identities = profile_identity(source, profile)
@@ -383,6 +582,11 @@ def execute_campaign(workspace_root: Path, fixture: Path, profile: CampaignProfi
             "temporalScheme": "Euler", "linearTolerance": LINEAR_TOLERANCE, "relativeLinearTolerance": 0,
             "tightRepeatTolerance": TIGHT_LINEAR_TOLERANCE, "iterativeSensitivityFraction": ITERATIVE_SENSITIVITY_FRACTION,
             "references": REFERENCES, "notAContinuationOfOriginalRas": True}
+    if profile == REFINED:
+        inputs["linkedPriorEvidence"] = {"repository": PRIOR_REPOSITORY, "runId": PRIOR_RUN_ID, "headSha": PRIOR_COMMIT,
+            "artifactId": PRIOR_ARTIFACT_ID, "outerSha256": PRIOR_OUTER_SHA256, "innerSha256": PRIOR_INNER_SHA256,
+            "reusedSpatialMeshes": [40, 80], "newSolves": 2, "priorTemporalMeshDivisions": 80,
+            "temporalEvidenceOnMesh160Required": True}
     binding = {"studyId": profile.id, "inputRevision": "campaign-v1", "inputSha256": digest(inputs), "referenceSha256": digest(identities)}
     result = {"schemaVersion": "untirta.educational-cavity-campaign.v1", "campaign": profile.id, "binding": binding,
               "status": "Preparing", "source": identities, "runs": [], "stages": [], "diagnostics": [],
@@ -404,13 +608,30 @@ def execute_campaign(workspace_root: Path, fixture: Path, profile: CampaignProfi
         workspace.mkdir()
         write_json(workspace / "input/campaign.json", inputs)
         write_json(workspace / "reference/source.json", identities)
-        runner, reports, histories = None, {}, {}
+        runner, reports, histories, prior = None, {}, {}, None
         try:
             if sys.platform != "linux" or os.environ.get("WM_PROJECT_VERSION") != "12":
                 raise WorkerDiagnostic("CFD_SOLVER_UNAVAILABLE", "Use only the checksum-pinned Foundation 12 Linux runtime in its bounded delegated scope.")
             programs = {name: shutil.which(name) for name in ("blockMesh", "checkMesh", "foamRun")}
             if not all(programs.values()):
                 raise WorkerDiagnostic("CFD_SOLVER_UNAVAILABLE", "The complete pinned mesher/checker/solver executables are required.")
+            if profile == REFINED:
+                raw, association = fetch_fixed_prior()
+                prior = verify_fixed_prior(raw, association, source)
+                result["linkedPriorEvidence"] = {key: value for key, value in prior.items() if key not in ("spatialRuns", "priorTemporalAssessment")}
+                result["linkedPriorEvidence"]["sourceFileResolution"] = "Prior sourceFiles resolve against the sealed exact prior inner archive, not against new mesh160 output."
+                result["reusedSpatialRuns"] = []
+                for item in prior["spatialRuns"]:
+                    row = {**item["row"], "reportPath": "reference/prior/" + item["row"]["id"] + "-quantity.json"}
+                    write_json(workspace / row["reportPath"], item["report"])
+                    reports[row["reportPath"]] = item["report"]
+                    result["reusedSpatialRuns"].append({"id": row["id"], "divisions": row["divisions"], "cellCount": row["cellCount"],
+                        "timeStepSeconds": row["timeStepSeconds"], "physicalEndTimeSeconds": row["physicalEndTimeSeconds"],
+                        "meshSha256": row["meshSha256"], "reportPath": row["reportPath"], "quantity": row["quantity"],
+                        "nativeSources": item["nativeSources"], "sourceRunId": PRIOR_RUN_ID, "newSolverExecution": False})
+                result["priorTemporalAssessment"] = {"sourceRunId": PRIOR_RUN_ID, "meshDivisions": 80,
+                    "assessment": prior["priorTemporalAssessment"], "qualifiesMesh160": False}
+                write_json(workspace / "reference/prior-native-identity.json", result["linkedPriorEvidence"])
             runner = ProcessRunner(workspace, Limits.parse(inputs["limits"]), workspace / "cancel.request")
             for name, n, dt in profile.runs:
                 folder = workspace / "runs" / name
@@ -434,12 +655,30 @@ def execute_campaign(workspace_root: Path, fixture: Path, profile: CampaignProfi
             result["actualSolverExecutionCompleted"] = True
             result["status"] = "EducationalNumericalExperimentCompleted"
             rows = {row["id"]: row for row in result["runs"]}
+            spatial_runs = profile.runs[:3]
+            if profile == REFINED:
+                rows.update({row["id"]: row for row in result["reusedSpatialRuns"]})
+                spatial_runs = LAMINAR.runs[1:3] + (REFINED.runs[0],)
             result["spatialEvidence"] = {"schemaVersion": "untirta.cfd-spatial-verification.v1", "gridDimension": 2,
                 "quantityId": QUANTITY, "relativeTolerance": TOLERANCE,
                 "runs": [{"reportPath": rows[name]["reportPath"], "representativeSpacingM": 0.1 / n,
-                          "cellCount": n**2, "meshSha256": rows[name]["meshSha256"]} for name, n, _ in profile.runs[:3]]}
+                          "cellCount": n**2, "meshSha256": rows[name]["meshSha256"]} for name, n, _ in spatial_runs]}
             from untirta_cfd_worker.numerical_verification import assess_spatial_evidence, assess_temporal_quantity_evidence
             result["spatialAssessment"] = assess_spatial_evidence(result["spatialEvidence"], reports=reports)
+            if profile == REFINED:
+                result["spatialPacket"] = {"kind": "spatial", "data": result["spatialEvidence"],
+                    "reports": {r["reportPath"]: reports[r["reportPath"]] for r in result["spatialEvidence"]["runs"]}}
+                result["temporalAssessment"] = {"status": "NotAssessedOnRefinedMesh", "meshDivisions": 160,
+                    "fineRelativeChange": None, "criterionSatisfied": None, "numericalQualitySatisfied": None,
+                    "reasonCode": "CFD_REFINED_MESH_TEMPORAL_EVIDENCE_REQUIRED",
+                    "action": "A separate fixed mesh160 time-step refinement is required; prior mesh80 temporal evidence is not mesh160 evidence."}
+                result["linearToleranceAssessment"] = assess_linear_repeat(rows[profile.runs[0][0]], rows[profile.runs[1][0]], result["spatialAssessment"], None)
+                result["newSolverExecutionCount"] = 2
+                result["reusedPriorSpatialExecutionCount"] = 2
+                result["qualificationLimitations"] = ["Two new mesh160 solves are linked to two independently recomputed prior40/80 native executions; the prior six-solve campaign remains separate.",
+                    "The unchanged1% educational spatial criterion is not physical accuracy acceptance.",
+                    "Temporal80 sensitivity cannot qualify mesh160 temporal error; nonlinear/coupling and every-grid iterative error remain unqualified, so full quality and GCI remain null."]
+                return result, workspace
             result["temporalEvidence"] = {"schemaVersion": "untirta.cfd-temporal-evidence.v1", "binding": binding,
                 "quantityId": QUANTITY, "evaluationTimeSeconds": profile.end_time, "relativeTolerance": TOLERANCE,
                 "runs": [{"historyPath": rows[name]["historyPath"], "timeStepSeconds": dt,

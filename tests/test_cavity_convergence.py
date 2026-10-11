@@ -220,6 +220,76 @@ class CavityCampaignContracts(unittest.TestCase):
         self.assertFalse(result["convergenceQualified"])
         self.assertFalse(result["mainApplicationWrites"])
 
+    def test_refined_is_two_new_mesh160_solves_without_old_profile_or_cap_change(self):
+        self.assertEqual(campaign.REFINED.id, "cavity-laminar-re100-discretisation-v2")
+        self.assertEqual(campaign.REFINED.runs, (("mesh160-dt00025",160,0.00025),("mesh160-dt00025-tight",160,0.00025)))
+        self.assertEqual(campaign.REFINED.end_time,0.5)
+        self.assertEqual(len(campaign.LAMINAR.runs),6)
+        self.assertEqual(len(campaign.LEGACY.runs),5)
+        fixture=ROOT/"tools/cfd_worker/fixtures/openfoam12"
+        base=campaign.prepare_case(fixture/"transient-cavity-v1",self.root/"refined",160,0.00025,campaign.REFINED)
+        self.assertEqual(base["linearTolerance"],"1e-9")
+        self.assertEqual(campaign.profile_identity(campaign.verified_source(fixture),campaign.REFINED),campaign.profile_identity(campaign.verified_source(fixture),campaign.LAMINAR))
+        for n,dt in ((80,0.00025),(160,0.001),(160,0.000125)):
+            with self.assertRaises(campaign.WorkerDiagnostic):campaign.prepare_case(fixture/"transient-cavity-v1",self.root/f"bad-{n}-{dt}",n,dt,campaign.REFINED)
+
+    def prior_association(self):
+        return {"repository":campaign.PRIOR_REPOSITORY,"repositoryPrivate":False,"runId":campaign.PRIOR_RUN_ID,
+            "headSha":campaign.PRIOR_COMMIT,"event":"workflow_dispatch","workflow":".github/workflows/cavity-convergence-validation.yml",
+            "status":"completed","conclusion":"success","artifactId":campaign.PRIOR_ARTIFACT_ID,
+            "artifactName":"cavity-discretisation-development-evidence","artifactExpired":False,
+            "artifactBytes":campaign.PRIOR_OUTER_BYTES,"artifactDigest":"sha256:"+campaign.PRIOR_OUTER_SHA256,
+            "artifactRunId":campaign.PRIOR_RUN_ID,"artifactHeadSha":campaign.PRIOR_COMMIT,"headersAndRedirectCredentialsStored":False}
+
+    def test_prior_source_run_requires_exact_public_authenticated_association(self):
+        association=self.prior_association();campaign.validate_prior_association(association)
+        for key,value in (("headSha","a"*40),("runId",1),("repositoryPrivate",True),("conclusion","failure"),("artifactDigest","sha256:"+"a"*64),("headersAndRedirectCredentialsStored",True)):
+            with self.assertRaises(campaign.WorkerDiagnostic):campaign.validate_prior_association({**association,key:value})
+        with self.assertRaises(campaign.WorkerDiagnostic):campaign.validate_prior_association({**association,"genericUserReport":True})
+
+    def test_generic_prior_report_or_modified_archive_cannot_supply_reused_quantity(self):
+        with self.assertRaises(campaign.WorkerDiagnostic) as error:
+            campaign.verify_fixed_prior(b'{"quantity":1}',self.prior_association(),{})
+        self.assertEqual(error.exception.code,"CFD_PRIOR_OUTER_CHECKSUM_MISMATCH")
+        with patch.object(campaign,"PRIOR_OUTER_BYTES",1),self.assertRaises(campaign.WorkerDiagnostic):
+            association=self.prior_association();campaign.verify_fixed_prior(b"x",association,{})
+
+    def test_durable_release_requires_exact_asset_target_url_size_and_digest(self):
+        release={"id":campaign.PRIOR_RELEASE_ID,"tag_name":campaign.PRIOR_RELEASE_TAG,"target_commitish":campaign.PRIOR_COMMIT,
+            "assets":[{"id":campaign.PRIOR_RELEASE_ASSET_ID,"name":campaign.PRIOR_RELEASE_ASSET_NAME,"size":campaign.PRIOR_OUTER_BYTES,
+                "digest":"sha256:"+campaign.PRIOR_OUTER_SHA256,"browser_download_url":campaign.PRIOR_RELEASE_URL}]}
+        campaign.validate_prior_release(release)
+        for key,value in (("target_commitish","main"),("id",1),("assets",release["assets"]*2)):
+            with self.assertRaises(campaign.WorkerDiagnostic):campaign.validate_prior_release({**release,key:value})
+        changed={**release,"assets":[{**release["assets"][0],"digest":"sha256:"+"a"*64}]}
+        with self.assertRaises(campaign.WorkerDiagnostic):campaign.validate_prior_release(changed)
+
+    def test_prior_archive_rejects_unsafe_paths_and_executable_payload(self):
+        for name,mode in (("../escape",0o100644),("safe/evil",0o100755),("safe!evil",0o100644)):
+            output=io.BytesIO()
+            with zipfile.ZipFile(output,"w") as archive:
+                item=zipfile.ZipInfo(name);item.external_attr=mode<<16;archive.writestr(item,b"x")
+            payload=output.getvalue().replace(b"safe!evil",b"safe\\evil")
+            with self.assertRaises(campaign.WorkerDiagnostic):campaign.checked_archive(payload)
+
+    def test_refined_prior_failure_prevents_every_mesher_solver_and_preserves_diagnostic(self):
+        fixture=ROOT/"tools/cfd_worker/fixtures/openfoam12"
+        with patch.object(campaign.sys,"platform","linux"),patch.dict(campaign.os.environ,{"WM_PROJECT_VERSION":"12"}),patch.object(campaign.shutil,"which",return_value="/usr/bin/foamRun"),patch.object(campaign,"fetch_fixed_prior",side_effect=campaign.WorkerDiagnostic("BAD_PRIOR","Restore exact retained prior evidence.")),patch.object(campaign,"ProcessRunner") as runner:
+            result,_=campaign.execute_campaign(self.root,fixture,campaign.REFINED)
+        runner.assert_not_called()
+        self.assertEqual(result["diagnostics"][0]["reasonCode"],"BAD_PRIOR")
+        self.assertEqual(result["stages"],[])
+        self.assertFalse(result["actualSolverExecutionCompleted"])
+        self.assertFalse(result["mainApplicationWrites"])
+
+    def test_refined_linear_repeat_uses_spatial_only_without_borrowed_temporal_claim(self):
+        base,tight=self.linear_repeat()
+        result=campaign.assess_linear_repeat(base,tight,{"fineRelativeChange":0.02},None)
+        self.assertAlmostEqual(result["relativeChangeThreshold"],0.002)
+        self.assertIn("mesh160 temporal sensitivity is unassessed",result["declaredCriterionBasis"])
+        self.assertIsNone(result["numericalQualitySatisfied"])
+        self.assertFalse(result["nonlinearCouplingErrorAssessed"])
+
     def test_source_checksum_rejects_tampered_fixture_before_copy(self):
         target = ROOT/"tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/U"
         original = campaign.file_digest

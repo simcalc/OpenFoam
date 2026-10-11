@@ -10,10 +10,12 @@ on:
         type: choice
         options:
           - laminar-re100
+          - laminar-re100-refined
           - ras-early
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: cfd-development-validation
@@ -49,6 +51,8 @@ jobs:
         run: bash tools/cfd_worker/install_openfoam12.sh
       - name: Real bounded fixed cavity discretisation experiment
         id: experiment
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -80,7 +84,7 @@ jobs:
             exit 2
           fi
           mkdir -p outputs/cavity-convergence
-          sudo --preserve-env=PATH,LD_LIBRARY_PATH,WM_PROJECT_VERSION,WM_PROJECT_DIR,FOAM_LIBBIN,FOAM_APPBIN,FOAM_ETC \
+          sudo --preserve-env=PATH,LD_LIBRARY_PATH,WM_PROJECT_VERSION,WM_PROJECT_DIR,FOAM_LIBBIN,FOAM_APPBIN,FOAM_ETC,GITHUB_TOKEN \
             systemd-run --scope --unit="untirta-cavity-convergence-${GITHUB_RUN_ID}" \
             -p Delegate=yes -p MemoryMax=2147483648 -p MemorySwapMax=0 -p CPUQuota=100% -p TasksMax=32 \
             /usr/bin/env "LD_LIBRARY_PATH=$foam_library_path" \

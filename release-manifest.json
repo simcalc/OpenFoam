@@ -17,12 +17,13 @@
   "impellerSourcePackageSha256": "b3dcd9a636a5a827bf43ffcf0156922ba6db492123f035eae1046ee759602dd1",
   "fixedNumericalCampaigns": [
     "cavity-discretisation-v1",
-    "cavity-laminar-re100-discretisation-v1"
+    "cavity-laminar-re100-discretisation-v1",
+    "cavity-laminar-re100-discretisation-v2"
   ],
   "impellerSourcePackageBuild": "12-86e126a7bc4d",
   "impellerSourceFixtureFiles": 20,
   "exporterSourcePath": "tools/cfd_worker/export_public.py",
-  "exporterSourceSha256": "10c58943dfe959905dd8245a3b5d12261d97bd01755b89b359a2385728e87808",
+  "exporterSourceSha256": "59c0f5230d25f012387aac8cf354faaf0321c8829883e06af30c2bfa283b12a3",
   "excluded": [
     "Main application",
     "Lab API",
@@ -45,11 +46,11 @@
     },
     {
       "path": ".github/workflows/cavity-convergence-validation.yml",
-      "sha256": "71df621c228c9fd66a6b3f2f04e9127deba9d65af89d7e6eb505e2a66c5dde46",
-      "bytes": 5570,
+      "sha256": "14115a031e8e1568a9ee787b172c429c08d8a1daa0080bd118de9164cdd874ae",
+      "bytes": 5690,
       "projection": "latest canonical manual workflow; public-only pre-allocation gate",
       "canonicalSourcePath": ".github/workflows/cavity-convergence-validation.yml",
-      "canonicalSourceSha256": "6b420c60bbc794404d9fdd92eeb977248bb5ca0269d332061397cad187e450b6"
+      "canonicalSourceSha256": "e982a45846ccaa3fd134cb3d3f51a583e420572584bc2fcf88c93a0ac88ab6c4"
     },
     {
       "path": ".github/workflows/impeller-cfd-validation.yml",
@@ -85,8 +86,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "c13d952335e2e5d5ca2ce056859ad98a5661676d95dfd2f82405828674364666",
-      "bytes": 14302,
+      "sha256": "ff6edae3071a19ec65edaeedafc068b781b23e74b96757fa380af3c83525d249",
+      "bytes": 14901,
       "projection": "canonical small public release template",
       "canonicalSourcePath": "deployment/cfd-public/README.md",
       "canonicalSourceSha256": "8ca9d5507a98be823488189bac4a0b622f24c1c21de9767b5c87a1da1ee3cfad"
@@ -197,11 +198,11 @@
     },
     {
       "path": "tests/test_cavity_convergence.py",
-      "sha256": "1d51f3dec354f291082049249cd1a377034222446ded3f8cc363033d8bdf0b4e",
-      "bytes": 21802,
+      "sha256": "c28ed89eedec0f21ced90c10777a5e1be999bcaed20a04970c1f356a1ae415e7",
+      "bytes": 27667,
       "projection": "same bounded numerical/parser/transport contracts; no local CFD claim",
       "canonicalSourcePath": "tests/cfd_worker/test_cavity_convergence.py",
-      "canonicalSourceSha256": "1d51f3dec354f291082049249cd1a377034222446ded3f8cc363033d8bdf0b4e"
+      "canonicalSourceSha256": "c28ed89eedec0f21ced90c10777a5e1be999bcaed20a04970c1f356a1ae415e7"
     },
     {
       "path": "tests/test_impeller.py",
@@ -693,11 +694,11 @@
     },
     {
       "path": "tools/cfd_worker/run_cavity_convergence.py",
-      "sha256": "6d827e23c47fc5f9a0c375063d2519e2bf49c10d5b75e9905b80ffc6ab121b1a",
-      "bytes": 42671,
-      "projection": "same fixed five-solve RAS and six-solve laminar/tight-repeat cavity producer; no student inputs or Pump geometry",
+      "sha256": "440a862aee2fecb6b517ad15c09ec95f6503fda5fbb32a74a686a6ad5a42722c",
+      "bytes": 62275,
+      "projection": "fixed original RAS, six-solve laminar and two-new-solve linked spatial refinement; no student inputs or Pump geometry",
       "canonicalSourcePath": "tools/cfd_worker/run_cavity_convergence.py",
-      "canonicalSourceSha256": "6d827e23c47fc5f9a0c375063d2519e2bf49c10d5b75e9905b80ffc6ab121b1a"
+      "canonicalSourceSha256": "440a862aee2fecb6b517ad15c09ec95f6503fda5fbb32a74a686a6ad5a42722c"
     },
     {
       "path": "tools/cfd_worker/software_release.py",
