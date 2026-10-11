@@ -15,10 +15,13 @@
     "transient-cavity-v1"
   ],
   "impellerSourcePackageSha256": "b3dcd9a636a5a827bf43ffcf0156922ba6db492123f035eae1046ee759602dd1",
+  "fixedNumericalCampaigns": [
+    "cavity-discretisation-v1"
+  ],
   "impellerSourcePackageBuild": "12-86e126a7bc4d",
   "impellerSourceFixtureFiles": 20,
   "exporterSourcePath": "tools/cfd_worker/export_public.py",
-  "exporterSourceSha256": "d749f74308ad6741e05d3868a44aecf10241ae377dd19d73169c7322d1d41e00",
+  "exporterSourceSha256": "954c6028dd632d56bfe5055a9db4b6bece2a4e289a56f13532326c7ff3d3e465",
   "excluded": [
     "Main application",
     "Lab API",
@@ -38,6 +41,14 @@
       "projection": "latest canonical manual workflow; public-only pre-allocation gate",
       "canonicalSourcePath": ".github/workflows/cavitation-cfd-validation.yml",
       "canonicalSourceSha256": "e2f5c4ce91495be770fa4c0c9c3ae258d0b2534fb6f27e90e81f575f7c250a4a"
+    },
+    {
+      "path": ".github/workflows/cavity-convergence-validation.yml",
+      "sha256": "9074dab8bfd50121b6c591e42961f465184495f266118077781bd3de5cecd700",
+      "bytes": 5222,
+      "projection": "latest canonical manual workflow; public-only pre-allocation gate",
+      "canonicalSourcePath": ".github/workflows/cavity-convergence-validation.yml",
+      "canonicalSourceSha256": "45122de31a0366751831eea53d02b97b1fb78e9ac3c3ab8ba2263a4840261489"
     },
     {
       "path": ".github/workflows/impeller-cfd-validation.yml",
@@ -113,11 +124,11 @@
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/checkpoint.py",
-      "sha256": "4fe48a0f5b35ee4337677ba93d0fdfadab91a83f438c5b24d67eeb440e87eecb",
-      "bytes": 30320,
+      "sha256": "b1f84712d5f612ae89242b54f79bb5ee6b4a402ec35c350b84b541ff5e5259e2",
+      "bytes": 30323,
       "projection": "reviewed OpenFOAM-only AST projection; no new numerical algorithm",
       "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/checkpoint.py",
-      "canonicalSourceSha256": "eb531f7ca34cc0f5423c2639d17479a1e1cbf3d61f5a1feb96cdc7fad79317c6"
+      "canonicalSourceSha256": "d26e04550c6a598dd78424c7157f4c60f83263a6951158d2e787ef098353c514"
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/contracts.py",
@@ -134,6 +145,14 @@
       "projection": "byte-identical reviewed fixed impeller/native frame and provenance logic",
       "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/impeller.py",
       "canonicalSourceSha256": "8ff93835626d3df1afb53f9b342dd470ae4661a0e88e024ef3575e4eacf130b3"
+    },
+    {
+      "path": "services/cfd_worker/src/untirta_cfd_worker/numerical_verification.py",
+      "sha256": "d8c841efe5ae65110ede7402b27bfa475f4d97256e89c0710791fd28bb6d0e6d",
+      "bytes": 25481,
+      "projection": "same pure Python controlled numerical sensitivity; no execution authenticity or physical acceptance",
+      "canonicalSourcePath": "services/cfd_worker/src/untirta_cfd_worker/numerical_verification.py",
+      "canonicalSourceSha256": "d8c841efe5ae65110ede7402b27bfa475f4d97256e89c0710791fd28bb6d0e6d"
     },
     {
       "path": "services/cfd_worker/src/untirta_cfd_worker/openfoam.py",
@@ -176,12 +195,28 @@
       "canonicalSourceSha256": "0a507c5222641365f3e170fc6f5daa9ba3d5af48de25e32435f6acff114e11b1"
     },
     {
+      "path": "tests/test_cavity_convergence.py",
+      "sha256": "52da7725535824df1c7d87737cfba6a3050f6c9bc5ddfe9f49a08d2b8d1a1dfd",
+      "bytes": 11790,
+      "projection": "same bounded numerical/parser/transport contracts; no local CFD claim",
+      "canonicalSourcePath": "tests/cfd_worker/test_cavity_convergence.py",
+      "canonicalSourceSha256": "52da7725535824df1c7d87737cfba6a3050f6c9bc5ddfe9f49a08d2b8d1a1dfd"
+    },
+    {
       "path": "tests/test_impeller.py",
       "sha256": "cf07554c25b7198f0cf6c14e222c209416c38a466594751e54ac57b5b15e506a",
       "bytes": 20681,
       "projection": "same official-source/frame/native-security contracts; not actual CFD",
       "canonicalSourcePath": "tests/cfd_worker/test_impeller.py",
       "canonicalSourceSha256": "cf07554c25b7198f0cf6c14e222c209416c38a466594751e54ac57b5b15e506a"
+    },
+    {
+      "path": "tests/test_numerical_verification.py",
+      "sha256": "7b9910bbef48922c63c8a1d1d1d19beff1f30d9e7c9e09d2e050b9c76aa68456",
+      "bytes": 13817,
+      "projection": "same bounded numerical/parser/transport contracts; no local CFD claim",
+      "canonicalSourcePath": "tests/cfd_worker/test_numerical_verification.py",
+      "canonicalSourceSha256": "7b9910bbef48922c63c8a1d1d1d19beff1f30d9e7c9e09d2e050b9c76aa68456"
     },
     {
       "path": "tests/test_release_boundary.py",
@@ -654,6 +689,14 @@
       "projection": "fixed educational CLI; private file ingress removed",
       "canonicalSourcePath": "tools/cfd_worker/run.py",
       "canonicalSourceSha256": "7a60018f2b68beb5e3851bf2ec3bcb92735575cd12d2381af10f1581ffe503c6"
+    },
+    {
+      "path": "tools/cfd_worker/run_cavity_convergence.py",
+      "sha256": "f700d694a0984a0988efd80a6747c73e519a2bbb5bdd04a46b9840e22360a869",
+      "bytes": 31545,
+      "projection": "same fixed five-solve cavity discretisation producer; no student inputs or Pump geometry",
+      "canonicalSourcePath": "tools/cfd_worker/run_cavity_convergence.py",
+      "canonicalSourceSha256": "f700d694a0984a0988efd80a6747c73e519a2bbb5bdd04a46b9840e22360a869"
     },
     {
       "path": "tools/cfd_worker/software_release.py",
