@@ -15,6 +15,7 @@ import zipfile
 ROOT = next(p for p in Path(__file__).resolve().parents if (p / "tools/cfd_worker/run_cavity_convergence.py").is_file())
 spec = importlib.util.spec_from_file_location("cavity_campaign_contract", ROOT / "tools/cfd_worker/run_cavity_convergence.py")
 campaign = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = campaign
 spec.loader.exec_module(campaign)
 
 
@@ -31,11 +32,11 @@ def mesh_log(n):
             + f"cells: {n*n}\nMin volume = {volume/(n*n)}. Max volume = {volume/(n*n)}.  Total volume = {volume}.  Cell volumes OK.\nMesh OK.\nEnd\n")
 
 
-def solver_log(dt=0.001):
+def solver_log(dt=0.001, profile=campaign.LEGACY):
     text = ["Build : " + campaign.OPENFOAM_PACKAGE_BUILD, "Create mesh for time = 0"]
-    for i in range(round(campaign.END_TIME / dt)):
+    for i in range(round(profile.end_time / dt)):
         text.extend(["Courant Number mean: 0.01 max: 0.2", f"Time = {(i+1)*dt:.12g}s"])
-        for name in ("Ux", "Uy", "p", "epsilon", "k"):
+        for name in (("Ux", "Uy", "p") if profile.laminar else ("Ux", "Uy", "p", "epsilon", "k")):
             text.append(f"linearSolver: Solving for {name}, Initial residual = 0.5, Final residual = 1e-7, No Iterations 4")
         text.append("time step continuity errors : sum local = 1e-9, global = -1e-20, cumulative = -1e-20")
     return "\n".join(text) + "\nEnd\n"
@@ -85,6 +86,102 @@ class CavityCampaignContracts(unittest.TestCase):
                 self.assertEqual((case/name).read_bytes(), raw)
         self.assertEqual(identities, campaign.verified_source(fixture))
         with self.assertRaises(campaign.WorkerDiagnostic): campaign.prepare_case(source, self.root/"unreviewed", 100, 0.01)
+
+    def test_laminar_derivative_is_distinct_fixed_six_run_experiment(self):
+        profile = campaign.LAMINAR
+        self.assertNotEqual(profile.id, campaign.LEGACY.id)
+        self.assertEqual(len(profile.runs), 6)
+        self.assertEqual(profile.runs[:5], campaign.RUNS)
+        self.assertEqual(profile.end_time, 0.5)
+        self.assertEqual(profile.output_interval, 0.1)
+        self.assertEqual(profile.runs[5][1:], profile.runs[2][1:])
+        for _, n, dt in profile.runs:
+            self.assertEqual(profile.end_time / dt, round(profile.end_time / dt))
+            self.assertEqual(profile.output_interval / dt, round(profile.output_interval / dt))
+            self.assertLessEqual(dt / (0.1 / n), 0.8 + 1e-14)
+        with self.assertRaises(Exception): profile.end_time = 5
+
+    def test_laminar_physics_and_linear_tolerances_are_explicit_source_untouched(self):
+        fixture = ROOT / "tools/cfd_worker/fixtures/openfoam12"
+        source = fixture / "transient-cavity-v1"
+        original = {p.relative_to(source).as_posix(): p.read_bytes() for p in source.rglob("*") if p.is_file()}
+        before = campaign.verified_source(fixture)
+        base = self.root / "laminar-base"; tight = self.root / "laminar-tight"
+        prepared = campaign.prepare_case(source, base, 80, 0.00025, campaign.LAMINAR)
+        repeated = campaign.prepare_case(source, tight, 80, 0.00025, campaign.LAMINAR, tight=True)
+        self.assertTrue(prepared["physicsOrBoundaryConditionsChanged"])
+        self.assertFalse(prepared["boundaryConditionsChanged"])
+        self.assertFalse(prepared["geometryChanged"])
+        self.assertRegex((base / "constant/momentumTransport").read_text(), r"simulationType\s+laminar;")
+        self.assertRegex((base / "constant/physicalProperties").read_text(), r"nu\s+0.001 \[m\^2/s\];")
+        self.assertEqual((base / "system/fvSolution").read_text().count("1e-9;"), 3)
+        self.assertEqual((tight / "system/fvSolution").read_text().count("1e-11;"), 3)
+        self.assertNotIn("relTol          0.1;", (base / "system/fvSolution").read_text())
+        for name, raw in original.items():
+            self.assertEqual((source / name).read_bytes(), raw)
+            if name != "system/fvSolution": self.assertEqual((base / name).read_bytes(), (tight / name).read_bytes())
+        self.assertNotEqual(prepared["derivedFileSha256"]["system/fvSolution"], repeated["derivedFileSha256"]["system/fvSolution"])
+        after = campaign.verified_source(fixture)
+        self.assertEqual(before, after)
+        derived = campaign.profile_identity(before, campaign.LAMINAR)
+        self.assertNotEqual(before["physicsSettingsSha256"], derived["physicsSettingsSha256"])
+        self.assertEqual(before["geometrySha256"], derived["geometrySha256"])
+        self.assertEqual(before["boundaryConditionsSha256"], derived["boundaryConditionsSha256"])
+        with self.assertRaises(campaign.WorkerDiagnostic): campaign.prepare_case(source, self.root / "bad-tight", 40, 0.00025, campaign.LAMINAR, tight=True)
+
+    def test_laminar_logs_require_every_pressure_velocity_courant_continuity_step(self):
+        log = solver_log(0.001, campaign.LAMINAR)
+        parsed = campaign.diagnostic_history(log, 0.001, campaign.LAMINAR)
+        self.assertEqual(parsed["physicalStepCount"], 500)
+        self.assertEqual(set(parsed["maxLastCorrectionLinearResidual"]), {"p", "Ux", "Uy"})
+        self.assertIsNone(parsed["numericalQualitySatisfied"])
+        for invalid in (log.replace("Time = 0.25s", "Time = 0.2501s"), log.replace("Solving for Uy", "Solving for Uz"), log.replace("Courant Number mean:", "No courant mean:")):
+            with self.assertRaises(campaign.WorkerDiagnostic): campaign.diagnostic_history(invalid, 0.001, campaign.LAMINAR)
+
+    def linear_repeat(self, tight_value=1.0001):
+        base = {"id": "base", "cellCount": 6400, "meshSha256": "a"*64, "timeStepSeconds": 0.00025,
+                "physicalEndTimeSeconds": 0.5, "quantity": {"id": campaign.QUANTITY, "unit": "m2/s2", "value": 1.0}}
+        tight = {**base, "id": "tight", "quantity": {**base["quantity"], "value": tight_value}}
+        return base, tight
+
+    def test_tighter_linear_repeat_compares_raw_quantity_without_gci_or_physical_promotion(self):
+        base, tight = self.linear_repeat()
+        assessed = campaign.assess_linear_repeat(base, tight, {"fineRelativeChange": 0.02}, {"fineRelativeChange": 0.005})
+        self.assertTrue(assessed["nominalCriterionSatisfied"])
+        self.assertAlmostEqual(assessed["relativeChange"], 0.0001)
+        self.assertAlmostEqual(assessed["relativeChangeThreshold"], 0.0005)
+        self.assertIsNone(assessed["numericalQualitySatisfied"])
+        self.assertFalse(assessed["engineeringValidated"])
+        self.assertFalse(assessed["nonlinearCouplingErrorAssessed"])
+        self.assertFalse(assessed["mainApplicationWrites"])
+        base, tight = self.linear_repeat(1.5)
+        assessed = campaign.assess_linear_repeat(base, tight, {"fineRelativeChange": 0.02}, {"fineRelativeChange": 0.005})
+        self.assertFalse(assessed["nominalCriterionSatisfied"])
+        self.assertEqual(assessed["relativeChange"], 0.5)
+        import xml.etree.ElementTree as ET
+        for key in ("inputMathML", "equationMathML", "substitutionMathML", "resultMathML"):
+            ET.fromstring(assessed["equationStages"][0][key])
+
+    def test_linear_repeat_rejects_other_mesh_time_units_nonfinite_or_zero_operands(self):
+        base, tight = self.linear_repeat()
+        for key, value in (("meshSha256", "b"*64), ("timeStepSeconds", 0.001), ("physicalEndTimeSeconds", 0.1), ("cellCount", 400)):
+            changed = {**tight, key: value}
+            with self.assertRaises(campaign.WorkerDiagnostic): campaign.assess_linear_repeat(base, changed, {"fineRelativeChange": 0.02}, {"fineRelativeChange": 0.005})
+        for value in (float("nan"), float("inf"), 0, -1):
+            changed = {**tight, "quantity": {**tight["quantity"], "value": value}}
+            with self.assertRaises(campaign.WorkerDiagnostic): campaign.assess_linear_repeat(base, changed, {"fineRelativeChange": 0.02}, {"fineRelativeChange": 0.005})
+
+    def test_laminar_cannot_start_solver_on_failed_mesh_or_overwrite_original_profile(self):
+        fixture = ROOT / "tools/cfd_worker/fixtures/openfoam12"
+        with patch.object(campaign.sys, "platform", "linux"), patch.dict(campaign.os.environ, {"WM_PROJECT_VERSION": "12"}), patch.object(campaign.shutil, "which", return_value="/usr/bin/foamRun"), patch.object(campaign, "ProcessRunner") as runner:
+            runner.return_value.run.return_value = {"exitCode": 0, "log": "test"}
+            with patch.object(campaign, "verify_uniform_mesh", side_effect=campaign.WorkerDiagnostic("BAD_MESH", "Preserve the failed native mesh.")):
+                result, _ = campaign.execute_campaign(self.root, fixture, campaign.LAMINAR)
+        self.assertEqual(result["campaign"], campaign.LAMINAR.id)
+        self.assertEqual(result["status"], "EducationalExperimentReviewRequired")
+        self.assertFalse(result["actualSolverExecutionCompleted"])
+        self.assertFalse(result["convergenceQualified"])
+        self.assertFalse(result["mainApplicationWrites"])
 
     def test_source_checksum_rejects_tampered_fixture_before_copy(self):
         target = ROOT/"tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/U"

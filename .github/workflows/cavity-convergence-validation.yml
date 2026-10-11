@@ -2,6 +2,15 @@ name: Cavity educational discretisation experiment
 
 on:
   workflow_dispatch:
+    inputs:
+      profile:
+        description: Fixed educational campaign (no Pump CFD claim)
+        required: true
+        default: laminar-re100
+        type: choice
+        options:
+          - laminar-re100
+          - ras-early
 
 permissions:
   contents: read
@@ -16,6 +25,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
+      CFD_CAVITY_PROFILE: ${{ inputs.profile || 'laminar-re100' }}
       PYTHONDONTWRITEBYTECODE: '1'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -77,6 +87,7 @@ jobs:
             "$(command -v python)" -B tools/cfd_worker/run_cavity_convergence.py \
             --workspace outputs/cavity-convergence --report outputs/cavity-convergence/report.json \
             --archive outputs/cavity-convergence/cavity-convergence-evidence.zip \
+            --profile "$CFD_CAVITY_PROFILE" \
             2>&1 | tee outputs/cavity-convergence-run.log
       - name: Verify public runner again and prepare bounded output evidence
         id: upload-guard
