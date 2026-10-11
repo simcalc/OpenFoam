@@ -11,6 +11,7 @@ on:
         options:
           - laminar-re100
           - laminar-re100-refined
+          - laminar-re100-temporal
           - ras-early
 
 permissions:

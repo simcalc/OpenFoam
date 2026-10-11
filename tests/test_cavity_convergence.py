@@ -290,6 +290,139 @@ class CavityCampaignContracts(unittest.TestCase):
         self.assertIsNone(result["numericalQualitySatisfied"])
         self.assertFalse(result["nonlinearCouplingErrorAssessed"])
 
+    def test_temporal_v3_only_two_mesh160_steps_no_additional_fine_or_tight_solve(self):
+        self.assertEqual(campaign.TEMPORAL.id, "cavity-laminar-re100-discretisation-v3")
+        self.assertEqual(campaign.TEMPORAL.runs, (("mesh160-dt001",160,0.001),("mesh160-dt0005",160,0.0005)))
+        self.assertEqual(sum(round(campaign.TEMPORAL.end_time/dt) for _,_,dt in campaign.TEMPORAL.runs),1500)
+        fixture=ROOT/"tools/cfd_worker/fixtures/openfoam12"
+        source=fixture/"transient-cavity-v1"
+        original=campaign.verified_source(fixture)
+        fine=campaign.prepare_case(source,self.root/"existing-fine-settings",160,0.00025,campaign.REFINED)
+        for name,n,dt in campaign.TEMPORAL.runs:
+            current=campaign.prepare_case(source,self.root/name,n,dt,campaign.TEMPORAL)
+            for path in fine["derivedFileSha256"]:
+                if path != "system/controlDict":
+                    self.assertEqual(current["derivedFileSha256"][path],fine["derivedFileSha256"][path])
+            self.assertEqual(current["controls"]["endTime"],"0.5")
+            self.assertEqual(current["controls"]["writeInterval"],str(round(0.1/dt)))
+            self.assertEqual(current["linearTolerance"],"1e-9")
+        self.assertEqual(campaign.profile_identity(original,campaign.TEMPORAL),campaign.profile_identity(original,campaign.REFINED))
+        for n,dt,tight in ((80,0.001,False),(160,0.00025,False),(160,0.0005,True)):
+            with self.assertRaises(campaign.WorkerDiagnostic):
+                campaign.prepare_case(source,self.root/f"invalid-temporal-{n}-{dt}-{tight}",n,dt,campaign.TEMPORAL,tight=tight)
+        self.assertEqual(campaign.verified_source(fixture),original)
+
+    def v2_association(self):
+        pins=campaign.prior_pins(campaign.REFINED)
+        return {"repository":campaign.PRIOR_REPOSITORY,"repositoryPrivate":False,"runId":pins["runId"],
+            "headSha":pins["commit"],"event":"workflow_dispatch","workflow":".github/workflows/cavity-convergence-validation.yml",
+            "status":"completed","conclusion":"success","artifactId":pins["artifactId"],
+            "artifactName":"cavity-discretisation-development-evidence","artifactExpired":False,
+            "artifactBytes":pins["outerBytes"],"artifactDigest":"sha256:"+pins["outerSha256"],
+            "artifactRunId":pins["runId"],"artifactHeadSha":pins["commit"],"headersAndRedirectCredentialsStored":False,
+            "retrievalMethod":"PinnedDurableRelease","originalArtifactAssociationIsHistorical":True}
+
+    def test_temporal_v3_requires_exact_v2_not_v1_or_generic_run_association(self):
+        association=self.v2_association()
+        campaign.validate_prior_association(association,campaign.REFINED)
+        for altered in (self.prior_association(),{**association,"headSha":"a"*40},{**association,"originalArtifactAssociationIsHistorical":False}):
+            with self.assertRaises(campaign.WorkerDiagnostic):campaign.validate_prior_association(altered,campaign.REFINED)
+        for profile in (campaign.LEGACY,campaign.TEMPORAL):
+            with self.assertRaises(campaign.WorkerDiagnostic):campaign.prior_pins(profile)
+
+    def test_temporal_v3_release_pins_reject_modified_asset_or_draft(self):
+        pins=campaign.prior_pins(campaign.REFINED)
+        release={"id":pins["releaseId"],"tag_name":pins["releaseTag"],"target_commitish":pins["commit"],"draft":False,"prerelease":False,
+            "assets":[{"id":pins["releaseAssetId"],"name":"outer-github-artifact.zip","size":pins["outerBytes"],
+                "digest":"sha256:"+pins["outerSha256"],"browser_download_url":pins["releaseUrl"]}]}
+        campaign.validate_prior_release(release,campaign.REFINED)
+        for altered in ({**release,"draft":True},{**release,"target_commitish":campaign.PRIOR_COMMIT},
+                        {**release,"assets":[{**release["assets"][0],"browser_download_url":"https://example.com/user-report.zip"}]}):
+            with self.assertRaises(campaign.WorkerDiagnostic):campaign.validate_prior_release(altered,campaign.REFINED)
+        with self.assertRaises(campaign.WorkerDiagnostic) as error:
+            campaign.verify_fixed_prior(b"untrusted modified prior",self.v2_association(),{},campaign.REFINED)
+        self.assertEqual(error.exception.code,"CFD_PRIOR_OUTER_CHECKSUM_MISMATCH")
+
+    def test_reused_temporal_history_retains_original_binding_samples_and_sources(self):
+        source={"binding":{"studyId":"sealed-v2","inputRevision":"source-v1","inputSha256":"1"*64,"referenceSha256":"2"*64},
+            "samples":[{"timeSeconds":0.5,"values":{"specific-kinetic-energy":0.033}}],
+            "sourceFiles":[{"path":"runs/mesh160-dt00025/native-case/0.5/U","sha256":"3"*64,"bytes":10}]}
+        original=json.dumps(source,sort_keys=True)
+        binding={"studyId":"new-v3","inputRevision":"campaign-v1","inputSha256":"4"*64,"referenceSha256":"2"*64}
+        derived,projection=campaign.bind_reused_history(source,binding)
+        self.assertEqual(json.dumps(source,sort_keys=True),original)
+        self.assertEqual(derived["samples"],source["samples"])
+        self.assertEqual(derived["sourceFiles"],source["sourceFiles"])
+        self.assertEqual(projection["originalBinding"],source["binding"])
+        self.assertEqual(projection["derivedBinding"],binding)
+        self.assertNotEqual(projection["originalHistoryDigest"],projection["derivedHistoryDigest"])
+        self.assertFalse(projection["newSolverExecution"])
+        with self.assertRaises(campaign.WorkerDiagnostic):campaign.bind_reused_history(source,{**binding,"referenceSha256":"5"*64})
+        derived["samples"][0]["values"]["specific-kinetic-energy"]=9
+        self.assertEqual(source["samples"][0]["values"]["specific-kinetic-energy"],0.033)
+
+    def test_temporal_prior_rejection_prevents_all_new_mesh_or_solver_work(self):
+        fixture=ROOT/"tools/cfd_worker/fixtures/openfoam12"
+        with patch.object(campaign.sys,"platform","linux"),patch.dict(campaign.os.environ,{"WM_PROJECT_VERSION":"12"}),patch.object(campaign.shutil,"which",return_value="/usr/bin/foamRun"),patch.object(campaign,"fetch_fixed_prior",side_effect=campaign.WorkerDiagnostic("BAD_V2_NATIVE","Restore exact sealed v2 native evidence.")),patch.object(campaign,"ProcessRunner") as runner:
+            result,_=campaign.execute_campaign(self.root,fixture,campaign.TEMPORAL)
+        runner.assert_not_called()
+        self.assertEqual(result["diagnostics"][0]["reasonCode"],"BAD_V2_NATIVE")
+        self.assertEqual(result["stages"],[])
+        self.assertFalse(result["actualSolverExecutionCompleted"])
+        self.assertFalse(result["convergenceQualified"])
+
+    def test_temporal_transport_assembles_correct_three_steps_and_never_qualifies_quality(self):
+        """Synthetic first-order transport contract only; no actual solver evidence."""
+        fixture=ROOT/"tools/cfd_worker/fixtures/openfoam12"
+        source=campaign.verified_source(fixture)
+        sealed_binding={"studyId":campaign.REFINED.id,"inputRevision":"campaign-v1","inputSha256":"1"*64,
+            "referenceSha256":campaign.digest(campaign.profile_identity(source,campaign.REFINED))}
+        def synthetic(name,dt,binding,tight=False):
+            value=0.04+dt+(1e-9 if tight else 0)
+            report={"schemaVersion":"untirta.cfd-numerical-quantity.v1","evidenceRole":"actual-solver",
+                **campaign.profile_identity(source,campaign.TEMPORAL,tight=tight),
+                "solverIdentity":{"distribution":"OpenFOAM-Foundation","version":"12"},"physicalTimeSeconds":0.5,
+                "timeStepSeconds":dt,"quantity":{"id":campaign.QUANTITY,"unit":"m2/s2","value":value},
+                "numericalQualitySatisfied":None,"sourceFiles":[{"path":"contract-only/U","sha256":"3"*64,"bytes":10}]}
+            history={"schemaVersion":"untirta.cfd-time-history.v1","binding":binding,"evidenceRole":"actual-solver","timeUnit":"s",
+                "quantities":[{"id":campaign.QUANTITY,"unit":"m2/s2"}],
+                "samples":[{"timeSeconds":t,"values":{campaign.QUANTITY:value}} for t in (0.1,0.2,0.3,0.4,0.5)],"sourceFiles":report["sourceFiles"]}
+            row={"id":name,"divisions":160,"cellCount":25600,"timeStepSeconds":dt,"physicalEndTimeSeconds":0.5,
+                "meshSha256":"4"*64,"quantity":report["quantity"],"reportPath":f"runs/{name}/numerical-quantity.json",
+                "historyPath":f"runs/{name}/time-history.json","diagnostics":{"physicalStepCount":round(0.5/dt),"samples":[]}}
+            return row,report,history
+        reused=[]
+        for name,_,dt in campaign.REFINED.runs:
+            row,report,history=synthetic(name,dt,sealed_binding,name.endswith("-tight"))
+            reused.append({"row":row,"report":report,"history":history,"nativeSources":[]})
+        prior={"temporalRuns":reused,"priorSpatialAssessment":{"fineRelativeChange":0.007},
+            "priorTemporalAssessment":{"status":"NotAssessedOnRefinedMesh"},"priorMesh80TemporalAssessment":{"qualifiesMesh160":False}}
+        class ContractRunner:
+            def __init__(self,*args):pass
+            def close(self):pass
+            def run(self,args,cwd,log):
+                log.parent.mkdir(parents=True,exist_ok=True);log.write_text("synthetic transport; not a real solver log\n")
+                return {"exitCode":0,"log":"contract-only"}
+        def collected(case,workspace,name,n,dt,identity,binding,profile):return synthetic(name,dt,binding)
+        with patch.object(campaign.sys,"platform","linux"),patch.dict(campaign.os.environ,{"WM_PROJECT_VERSION":"12"}),patch.object(campaign.shutil,"which",return_value="/usr/bin/foamRun"),patch.object(campaign,"fetch_fixed_prior",return_value=(b"contract-only",{})),patch.object(campaign,"verify_fixed_prior",return_value=prior),patch.object(campaign,"ProcessRunner",ContractRunner),patch.object(campaign,"verify_uniform_mesh"),patch.object(campaign,"collect_run",side_effect=collected):
+            result,workspace=campaign.execute_campaign(self.root,fixture,campaign.TEMPORAL)
+        self.assertEqual(len(result["runs"]),2)
+        self.assertEqual(len(result["stages"]),6)
+        self.assertEqual([run["timeStepSeconds"] for run in result["temporalEvidence"]["runs"]],[0.001,0.0005,0.00025])
+        self.assertTrue(result["temporalAssessment"]["valid"])
+        self.assertAlmostEqual(result["temporalAssessment"]["observedOrder"],1)
+        self.assertTrue(result["temporalAssessment"]["nominalRelativeChangeCriterionSatisfied"])
+        self.assertIsNone(result["temporalAssessment"]["numericalQualitySatisfied"])
+        self.assertIsNone(result["temporalAssessment"]["criterionSatisfied"])
+        self.assertFalse(result["convergenceQualified"])
+        self.assertFalse(result["mainApplicationWrites"])
+        self.assertFalse(result["reusedTemporalRuns"][0]["newSolverExecution"])
+        original=json.loads((workspace/"reference/prior/mesh160-dt00025-original-history.json").read_text())
+        bound=json.loads((workspace/"reference/prior/mesh160-dt00025-bound-history.json").read_text())
+        self.assertEqual(original["binding"],sealed_binding)
+        self.assertEqual(bound["binding"],result["binding"])
+        self.assertEqual(original["samples"],bound["samples"])
+
     def test_source_checksum_rejects_tampered_fixture_before_copy(self):
         target = ROOT/"tools/cfd_worker/fixtures/openfoam12/transient-cavity-v1/0/U"
         original = campaign.file_digest
