@@ -326,6 +326,18 @@ def write_archive(workspace: Path, output: Path, profile: CampaignProfile = LEGA
     return {"path": output.name, "sha256": file_digest(output), "bytes": output.stat().st_size, "maximumBytes": MAX_ARCHIVE}
 
 
+def persist_run_diagnostics(row: dict, workspace: Path) -> None:
+    """Retain every native step separately so the summary cannot exceed its cap."""
+    path = workspace / "runs" / row["id"] / "diagnostic-history.json"
+    if path.exists() or not path.resolve().is_relative_to(workspace.resolve()):
+        raise WorkerDiagnostic("CFD_CAMPAIGN_DIAGNOSTIC_PATH_INVALID", "Write a fresh per-run diagnostic history inside the dedicated campaign workspace.")
+    original = row["diagnostics"]
+    write_json(path, {"schemaVersion": "untirta.educational-cavity-diagnostic-history.v1", "runId": row["id"],
+                      "physicalStepCount": original["physicalStepCount"], "samples": original["samples"]})
+    row["diagnostics"] = {key: value for key, value in original.items() if key != "samples"}
+    row["diagnostics"]["sampleHistory"] = descriptor(path, workspace)
+
+
 def assess_linear_repeat(base: dict, tight: dict, spatial: dict, temporal: dict) -> dict:
     """A controlled linear-tolerance experiment; no nonlinear-error qualification."""
     if (base["cellCount"] != tight["cellCount"] or base["meshSha256"] != tight["meshSha256"]
@@ -413,7 +425,7 @@ def execute_campaign(workspace_root: Path, fixture: Path, profile: CampaignProfi
                 run_identities = profile_identity(source, profile, tight=name.endswith("-tight"))
                 row, report, history = collect_run(case, workspace, name, n, dt, run_identities, binding, profile)
                 row["derivedSettings"] = prepared
-                report["numericalControlsSha256"] = prepared["derivedFileSha256"]["system/fvSolution"]
+                persist_run_diagnostics(row, workspace)
                 write_json(workspace / row["reportPath"], report)
                 write_json(workspace / row["historyPath"], history)
                 reports[row["reportPath"]], histories[row["historyPath"]] = report, history

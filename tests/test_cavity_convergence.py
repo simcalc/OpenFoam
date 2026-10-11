@@ -138,6 +138,43 @@ class CavityCampaignContracts(unittest.TestCase):
         for invalid in (log.replace("Time = 0.25s", "Time = 0.2501s"), log.replace("Solving for Uy", "Solving for Uz"), log.replace("Courant Number mean:", "No courant mean:")):
             with self.assertRaises(campaign.WorkerDiagnostic): campaign.diagnostic_history(invalid, 0.001, campaign.LAMINAR)
 
+    def test_laminar_collected_quantity_preserves_exact_verifier_schema(self):
+        """Synthetic parser-boundary evidence only; no solver execution claim."""
+        from untirta_cfd_worker.numerical_verification import REPORT_KEYS, _quantity_report
+        folder = self.root / "runs/schema-contract"; case = folder / "native-case"
+        (case / "constant/polyMesh").mkdir(parents=True)
+        (case / "constant/polyMesh/points").write_text(point_field(20))
+        (case / "system").mkdir(); (case / "system/blockMeshDict").write_text("// contract geometry descriptor")
+        (folder / "logs").mkdir()
+        (folder / "logs/checkMesh.log").write_text(mesh_log(20))
+        (folder / "logs/foamRun.log").write_text(solver_log(0.00025, campaign.LAMINAR))
+        for time in ("0", "0.1", "0.2", "0.3", "0.4", "0.5"):
+            (case / time).mkdir()
+            (case / time / "U").write_text("dimensions [0 1 -1 0 0 0 0]; internalField uniform (1 0 0);")
+            (case / time / "p").write_text("dimensions [0 2 -2 0 0 0 0]; internalField uniform 0;")
+        identity = campaign.profile_identity(campaign.verified_source(ROOT / "tools/cfd_worker/fixtures/openfoam12"), campaign.LAMINAR)
+        _, report, history = campaign.collect_run(case, self.root, "schema-contract", 20, 0.00025, identity, {}, campaign.LAMINAR)
+        self.assertEqual(set(report), REPORT_KEYS)
+        self.assertEqual(_quantity_report(report)["quantity"]["value"], 0.5)
+        self.assertEqual(history["samples"][-1]["timeSeconds"], 0.5)
+        self.assertNotIn("numericalControlsSha256", report)
+
+    def test_split_diagnostic_history_preserves_every_step_without_raising_archive_caps(self):
+        path = self.root / "runs/budget-contract"; path.mkdir(parents=True)
+        raw = campaign.diagnostic_history(solver_log(0.00025, campaign.LAMINAR), 0.00025, campaign.LAMINAR)
+        row = {"id": "budget-contract", "diagnostics": raw}
+        campaign.persist_run_diagnostics(row, self.root)
+        saved = json.loads((path / "diagnostic-history.json").read_text())
+        self.assertEqual(saved["samples"], raw["samples"])
+        self.assertEqual(saved["physicalStepCount"], 2000)
+        self.assertNotIn("samples", row["diagnostics"])
+        item = row["diagnostics"]["sampleHistory"]
+        self.assertEqual(item["sha256"], campaign.file_digest(self.root / item["path"]))
+        self.assertLess(item["bytes"], 4*1024**2)
+        self.assertLess(len(json.dumps(row).encode()), 4000)
+        self.assertEqual(campaign.MAX_ARCHIVE, 25*1024**2)
+        with self.assertRaises(campaign.WorkerDiagnostic): campaign.persist_run_diagnostics({"id": "budget-contract", "diagnostics": raw}, self.root)
+
     def linear_repeat(self, tight_value=1.0001):
         base = {"id": "base", "cellCount": 6400, "meshSha256": "a"*64, "timeStepSeconds": 0.00025,
                 "physicalEndTimeSeconds": 0.5, "quantity": {"id": campaign.QUANTITY, "unit": "m2/s2", "value": 1.0}}

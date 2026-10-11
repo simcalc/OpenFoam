@@ -197,11 +197,11 @@
     },
     {
       "path": "tests/test_cavity_convergence.py",
-      "sha256": "31b7aa816ead187dee289fc64603eff6f0d6758cb2a1371ff35db2338804a85a",
-      "bytes": 19104,
+      "sha256": "1d51f3dec354f291082049249cd1a377034222446ded3f8cc363033d8bdf0b4e",
+      "bytes": 21802,
       "projection": "same bounded numerical/parser/transport contracts; no local CFD claim",
       "canonicalSourcePath": "tests/cfd_worker/test_cavity_convergence.py",
-      "canonicalSourceSha256": "31b7aa816ead187dee289fc64603eff6f0d6758cb2a1371ff35db2338804a85a"
+      "canonicalSourceSha256": "1d51f3dec354f291082049249cd1a377034222446ded3f8cc363033d8bdf0b4e"
     },
     {
       "path": "tests/test_impeller.py",
@@ -693,11 +693,11 @@
     },
     {
       "path": "tools/cfd_worker/run_cavity_convergence.py",
-      "sha256": "baaaddb2cdfa87792c869940ddad76d51fa5526fc2a3acfc7236c173e1147fc8",
-      "bytes": 41846,
+      "sha256": "6d827e23c47fc5f9a0c375063d2519e2bf49c10d5b75e9905b80ffc6ab121b1a",
+      "bytes": 42671,
       "projection": "same fixed five-solve RAS and six-solve laminar/tight-repeat cavity producer; no student inputs or Pump geometry",
       "canonicalSourcePath": "tools/cfd_worker/run_cavity_convergence.py",
-      "canonicalSourceSha256": "baaaddb2cdfa87792c869940ddad76d51fa5526fc2a3acfc7236c173e1147fc8"
+      "canonicalSourceSha256": "6d827e23c47fc5f9a0c375063d2519e2bf49c10d5b75e9905b80ffc6ab121b1a"
     },
     {
       "path": "tools/cfd_worker/software_release.py",
